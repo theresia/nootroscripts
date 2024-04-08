@@ -2,8 +2,10 @@ For context, see blogpost: http://proses.id/nootroscripts/
 
 For usage,
 
-Set up your virtual env (or not, if you like living dangerously).
+1. Set up your virtual env (or not, if you like living dangerously).
 
-> pip install -r requirements.txt
+2. Run `pip install -r requirements.txt`
 
-Put OPENAI_KEY in your env path
+3. Put OPENAI_KEY in your env path
+
+4. Run test.sh to test if the basic commands run successfully.
