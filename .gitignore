@@ -1,3 +1,6 @@
+coba/
+cobalagi/
+
 output/**/*.*
 output/*.*
 !output/.gitkeep
