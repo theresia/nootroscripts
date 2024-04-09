@@ -212,7 +212,7 @@ def process_youtube_video(url, video_id, language="en"):
         streams = youtube_video.streams.filter(only_audio=True)
         # taking first object of lowest quality
         stream = streams.first()
-        OUTPUT_AUDIO = Path(__file__).resolve().parent.parent.joinpath('data', video_id+'.mp4')
+        OUTPUT_AUDIO = Path(__file__).resolve().parent.joinpath('output', video_id+'.mp4')
         stream.download(filename=OUTPUT_AUDIO)
         
         import torch

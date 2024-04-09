@@ -19,3 +19,4 @@ langchain-community
 lxml==5.1.0
 lxml[html_clean]
 pyppeteer==2.0.0
+pytube
