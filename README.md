@@ -8,7 +8,7 @@
 
 **Input**: Takes in YouTube video ID, an audio file, or a URL of articles
 
-**Process**: Select a mode that you'd like the LLM to go into (see `--help` for each script for a list of modes supported)
+**Process**: Select a mode that you'd like the Large Language Model (LLM) to go into (see `--help` for each script for a list of modes supported)
 
 **Output**: Generates .txt or .md, on the same path as the input, when an output path is not specified
 
@@ -18,15 +18,15 @@
 
 2. Run `pip install -r requirements.txt`
 
-3. This project requires an `OPENAI_API_KEY` environment variable with an [OpenAI API key](https://platform.openai.com/api-keys).
+3. This project requires an `OPENAI_KEY` environment variable with an [OpenAI API key](https://platform.openai.com/api-keys).
 
-4. This project also supports using your own local language model installed via Ollama.ai.
+4. This project also supports using your own local LLM installed via Ollama.ai.
 
 4.a. You can install ollama by doing `curl https://ollama.ai/install.sh | sh`
 
 4.b. And get the mistral model by running `ollama pull mistral`
 
-5. Install ffmpeg on your OS if you do not have it yet. This is required by pytube to download and encode the video from YouTube (to be transcribed locally by Whisper), when transcript is available.
+5. Install `ffmpeg` on your OS if you do not have it yet. This is required by pytube to download and encode the video from YouTube (to be transcribed locally by Whisper), when transcript is available.
 
 6. You may run `test.sh` to test if the sample commands run successfully. Comment out the line with `--lmodel mistral` if you haven't installed mistral via ollama (step 4), or change the lmodel to other ollama model if mistral is too slow for your machine.
 
