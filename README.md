@@ -72,3 +72,54 @@ These scripts
 - help me persist the ideas and insights into something I can rediscover
 
 For more context, see blogpost: http://proses.id/nootroscripts/
+
+## Observations and plans
+
+A. md2notes.py is a subset of audio2llm.py.
+
+Option 1: discard md2notes.py or
+Option 2: refactor each into two scripts as they have their own specific input, moving the common components to a separate piece of code?
+
+B. the LLM output of youtube2llm.py is quite high-level, vague, and not as good (refined, granular, precise) as the audio2llm.py
+
+need to check if it's the prompt, the chunking strategy, the context window, or what.
+
+seems like it's a combination all of them sih.
+
+----
+
+I'll eventually need to refactor all these scripts into these specific components:
+
+I. Retrievals:
+
+- youtube (am 83% happy with what youtube2llm.py does in terms of retrieval)
+- podcast (any LOCAL audio stream sih, be it mp3, mp4, m4a, etc).
+    it'd be great to support streams or major podcast syndication services like libsyn, anchor, spotify even though I tend to want to store the audio files locally, and rarely use spotify
+    e.g. audacy.com
+        https://www.audacy.com/podcast/tetragrammaton-with-rick-rubin-14b90/episodes/steven-pressfield-1f039
+        https://api.audacy.com/experience/v1/page?path=%2Fpodcast%2Ftetragrammaton-with-rick-rubin-14b90%2Fepisodes%2Fsteven-pressfield-1f039
+        contentObj.streamUrl.default
+        https://dcs.megaphone.fm/NTOMT5595934781.mp3?key=20736859831fc276da7e24a34aadd1ee&request_event_id=0c8045bb-0532-4681-8703-93fadfb90e86
+    or extract some youtube ID from this page
+        https://www.cognitiverevolution.ai/the-ai-email-assistant-ive-been-waiting-for-with-andrew-lee-of-shortwave/
+- article (am 98% happy with url2md.py)
+- instagram (image, video, caption, comments, transcript). am 98% happy with my installm project
+- local notes (textfiles and markdowns), or popular platforms like notion, obsidian, and perhaps blogging CMS'es exports
+
+II. LLM
+
+- chunking (words, sentences, semantic -- implemented in other script)
+- prompts (the collection of "modes" i.e. prompts I supported here)
+- model configuration (cloud, local)
+
+III. Post processing
+
+- embedding (BGE, lv2, openAI's, mistralAI's, claude's, instructor-xl)
+- indexing (llama index, langchain?)
+- querying
+
+
+IV. Creation / Production
+
+- curation
+- generate drafts
