@@ -67,6 +67,9 @@ import pandas as pd # for storing text and embeddings data
 from pathlib import Path
 from scipy import spatial  # for calculating vector similarities for search
 from yt_dlp import YoutubeDL # I only use YoutubeDL to retrieve the chapters and the title of the video
+# from openai.embeddings_utils import cosine_similarity, get_embedding # not used yet,
+#       see https://platform.openai.com/docs/guides/embeddings/use-cases > text search using embeddings
+#       and https://cookbook.openai.com/examples/recommendation_using_embeddings
 
 YOUTUBE_VIDEO_URL = "https://www.youtube.com/watch?v={}"
 
@@ -74,8 +77,11 @@ YOUTUBE_VIDEO_URL = "https://www.youtube.com/watch?v={}"
 WHISPER_MODEL = 'base' # tiny base small medium large
 GPT_MODEL = 'gpt-3.5-turbo'
 
-## embedding-related
-EMBEDDING_MODEL = "text-embedding-ada-002"
+## embedding-related.
+## reference: https://platform.openai.com/docs/guides/embeddings/embedding-models
+EMBEDDING_MODEL = "text-embedding-ada-002" # 1536 output dimension, "Most capable 2nd generation embedding model, replacing 16 first generation models"
+EMBEDDING_MODEL = "text-embedding-3-large" # 3072 output dimension, "Most capable embedding model for both english and non-english tasks"
+EMBEDDING_MODEL = "text-embedding-3-small" # 1536 output dimension, "Increased performance over 2nd generation ada embedding model"
 BATCH_SIZE = 1000
 # as per https://github.com/openai/openai-cookbook/blob/3f8d3f34054526173c0c9cd110d21d90fe993c3f/examples/Get_embeddings_from_dataset.ipynb or https://cookbook.openai.com/examples/get_embeddings_from_dataset
 embedding_encoding = "cl100k_base"  # this the encoding for text-embedding-ada-002
