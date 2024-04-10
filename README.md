@@ -1,3 +1,9 @@
+## Nooscro... What's this name?
+
+**Nootropics**: Drug, supplement, or other substance that improves cognitive function. Colloquially brain supplements, smart drugs and cognitive enhancers, are natural, semisynthetic or synthetic compounds which purportedly improve cognitive functions, such as executive functions, attention or memory.
+
+**NootroScripts**: A suite of LLM-powered scripts to help synthesize content in different formats and sources, more efficiently. Cognitive enhancers for curious curators.
+
 ## Overview
 
 **Input**: Takes in YouTube video ID, an audio file, or a URL of articles
