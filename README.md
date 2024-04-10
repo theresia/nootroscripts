@@ -18,7 +18,7 @@
 
 2. Run `pip install -r requirements.txt`
 
-3. This project requires an `OPENAI_KEY` environment variable with an [OpenAI API key](https://platform.openai.com/api-keys).
+3. This project requires an **`OPENAI_KEY`** environment variable with an [OpenAI API key](https://platform.openai.com/api-keys).
 
 4. This project also supports using your own local LLM installed via Ollama.ai.
 
