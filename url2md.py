@@ -47,6 +47,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='get markdown for the url')
     parser.add_argument('--url', type=str, default=url, help='url you\'d like to markdown')
     parser.add_argument('--ul', type=str, help='path to url list, one url per line')
+    parser.add_argument('--output_dir', type=str, help='dir to use to save the output file')
     parser.add_argument('--redo', action='store_true', help='if specified, will overwrite existing md files')
     args = parser.parse_args()
 
@@ -58,8 +59,9 @@ if __name__ == '__main__':
     
     if url:
         url_list.append(url)
-
-    if ul and os.path.exists(ul):
+    
+    # if ul is provided then the output folder is theme-based
+    if(ul and os.path.exists(ul)):
         with open(ul, 'r') as ful:
             urls = ful.read().split("\n")
             for url in urls:
@@ -86,9 +88,14 @@ if __name__ == '__main__':
             for k in sanitised_qs.keys():
                 # slug += k+sanitised_qs[k].replace('/', '')
                 slug += k+sanitised_qs[k].replace('/', '').replace(':', '').replace(',', '').replace(' ', '')
-
-        if not ul: # if ul is provided then the output folder is theme-based
+        
+        if not ul:
             output_dir = output_dir+netloc
+        
+        # override output_dir if output_dir is specified as an arg
+        if(args.output_dir and os.path.exists(args.output_dir)):
+            output_dir = args.output_dir
+
         if not os.path.exists(output_dir):
             os.mkdir(output_dir)
 
