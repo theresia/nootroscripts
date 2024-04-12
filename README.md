@@ -70,6 +70,8 @@ Perfect for journalists and researchers who want to optimise for thoroughness in
 These scripts
 - help get the nuggets from non-fiction content
 - help me persist the ideas and insights into something I can rediscover
+- help me manage cognitive load. this is basically a RIL-on-steroid (RIL: Read It Later)
+- help me indulge my tsundoku and snoozing/JIC tendency, ^^; (JIC: Just In Case)
 
 For more context, see blogpost: http://proses.id/nootroscripts/
 
@@ -95,17 +97,24 @@ I. Retrievals:
 - **youtube** (am 83% happy with what youtube2llm.py does in terms of retrieval)
 - **podcast** (any LOCAL audio stream sih, be it mp3, mp4, m4a, etc).
     - it'd be great to support streams or major podcast syndication services like libsyn, anchor, spotify even though I tend to want to store the audio files locally, and rarely use spotify
-    - e.g. audacy.com https://www.audacy.com/podcast/tetragrammaton-with-rick-rubin-14b90/episodes/steven-pressfield-1f039
-    - or extract the youtube ID from this page https://www.cognitiverevolution.ai/the-ai-email-assistant-ive-been-waiting-for-with-andrew-lee-of-shortwave/
+    - e.g. [audacy.com](https://www.audacy.com/podcast/tetragrammaton-with-rick-rubin-14b90/episodes/steven-pressfield-1f039)
+    - or extract the youtube ID from [this page](https://www.cognitiverevolution.ai/the-ai-email-assistant-ive-been-waiting-for-with-andrew-lee-of-shortwave/)
 - **article** (am 98% happy with url2md.py)
 - **instagram** (image, video, caption, comments, transcript). am 98% happy with my installm project
 - **local notes** (textfiles and markdowns), or popular platforms like notion, obsidian, and perhaps blogging CMS'es exports
 
 II. LLM
 
-- **chunking**: words, sentences, semantic -- implemented in other script
-- **prompts**: the collection of "modes" i.e. prompts I supported here
-- **model configuration**: cloud, local
+- **chunking**: a good chunking strategy would help us get the best level of zoom & coverage, and get a better flow (proper segues and context). the ultimate goal is to appropriately (sometimes fully) and accurately capture and represent the content. common strategies:
+    - words # implemented
+    - sentences # implemented
+    - semantic # implemented in chunking_test.py
+    - specific e.g. podcast vs article vs essay # WiP #1
+    - dynamic aka different chunk size based on the podcast/article/essay content e.g. average length of argument, the speaker's tendency, monologue, dialogue, breaking news # WiP #2
+- **prompts** (the collection of "modes" i.e. prompts I supported here)
+- **model configuration**
+    - cloud: OpenAI, MistralAI, Anthropic, Google Gemini, AWS BedRock
+    - local: ollama, huggingface, and other providers
 
 III. Post processing
 
