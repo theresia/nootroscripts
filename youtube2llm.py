@@ -240,11 +240,19 @@ def process_youtube_video(url, video_id, language="en", force_download_audio=Fal
 
     return transcript, chapters, video_title
 
-def summarize_text(transcript, chapters, use_chapters=True, prompt='', video_title=''):
-    system_prompt = "You are a researcher who needs to generate a concise note out of the transcript below. " \
-    "Do not summarize and keep every information. Do not include anything that is not in the transcript. " \
-    "Make sure the note has useful and factual information about all the points of the discussion. " \
-    "Please use bullet points to list all the relevant details."
+def llm_process(transcript, llm_mode, chapters=[], use_chapters=True, prompt='', video_title=''):
+    system_prompt = "list all the questions asked and a three-sentence answer to each (include all examples of concrete situations and stories shared in the answer)"
+    
+    # not implemented yet
+    do_note = False
+    if (do_note):
+        # the version I have in audio2llm.py
+        system_prompt = "You are an expert at making factual, succinct, and detailed notes from transcripts. " \
+                        "You will rewrite the transcript provided into notes. Do not summarize and keep every information. "
+        # or
+        system_prompt = "You are a researcher who is an expert at making factual, succinct, and detailed notes from transcripts. " \
+                        "Do not summarize and keep every information. Do not include anything that is not in the transcript. " \
+                        "Please use bullet points to list all the relevant details."
     
     if(prompt):
         system_prompt = prompt
@@ -506,6 +514,8 @@ if __name__ == '__main__':
     parser.add_argument('--q', type=str, help='your question')
     parser.add_argument('--tf', type=str, help='transcript filename, if exists, to create embedding for. in this case, value of vid is ignored')
     parser.add_argument('--ef', type=str, help='embedding filename to use')
+    # only QnAs mode is implemented at the moment. want to merge with the llm_process method in audio2llm.py
+    parser.add_argument('--lmode', type=str, default='QnAs', help='QnAs, note, summary/kp, tag, topix, thread, tp, cbb, definition, translation')
     parser.add_argument('--lmodel', type=str, default='gpt-3.5-turbo', help='the GPT model to use for summarization (default: gpt-3.5-turbo)')
     parser.add_argument('--prompt', type=str, help='prompt to use, but chapters will be concatenated as well')
     parser.add_argument('--nc', action='store_true', help="don't pass chapters to analyse")
@@ -538,10 +548,10 @@ if __name__ == '__main__':
         if(args.nc):
             with_chapters = False
         
-        summary = summarize_text(transcript, chapters, use_chapters=with_chapters, prompt=args.prompt, video_title=video_title)
-        print(f'Summary for the Video:\n{summary}')
-        with open('output/'+video_id+'-summary.md', "w") as f:
-            f.write(summary)
+        llm_result = llm_process(transcript, llm_mode=args.lmode, chapters=chapters, use_chapters=with_chapters, prompt=args.prompt, video_title=video_title)
+        print(f'LLM result for the Video:\n{llm_result}')
+        with open('output/'+video_id+'-'+args.lmode+'.md', "w") as f:
+            f.write(llm_result)
     elif args.mode == 'embed': # not sdtrong enough, TODO to refactor
         if args.vid:
             transcript_id = args.vid # need this to construct the below. TODO: refactor so the file naming is more structured and simple
