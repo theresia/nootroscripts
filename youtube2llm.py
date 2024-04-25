@@ -13,22 +13,30 @@ Usage
     
     # transcribe and summarise a podcast episode (or any audio file)
     youtube2llm.py summarise --af ~/Documents/Podcasts/d7a205f9-90af-44df-a37b-69505a3da691_transcoded.mp3 --mode transcription
-
+    
     # summarise a transcript file
     youtube2llm.py summarise --tf output/FbquCdNZ4LM-transcript.txt
 
     # don't send chapters, when it's making it too verbose or fragmented
     youtube2llm.py summarise --vid=FbquCdNZ4LM --nc
     
-    youtube2llm.py summarise --vid PDpyUMOOcyw --lang id # vid has no auto caption, so we specify Indonesian language so Whisper's output is better
-    youtube2llm.py summarise --vid=TVbeikZTGKY --nc  # the video has no subtitle, so Whisper goes on to transcribe it
+    # download and transcribe the audio file (don't use YouTube's auto caption)
+    youtube2llm.py summarise --vid=MNwdq2ofxoA --nc --lmodel mistral --dla
 
-    youtube2llm.py summarise --vid=FbquCdNZ4LM --nc # a video that has age filter on
-        pytube.exceptions.AgeRestrictedError: FbquCdNZ4LM is age restricted, and can't be accessed without logging in.
-        in this case, I will use `yt-dlp -f` to get the audio file (m4a or mp4) and then run the audio file through summarize.py to transcribe it with Whisper
-        another example of such video: https://www.youtube.com/watch?v=77ivEdhHKB0
+    # the video has no subtitle, so it falls back to Whisper that transcribes it
+    youtube2llm.py summarise --vid=TVbeikZTGKY --nc
     
-    youtube2llm.py summarise --vid=sYmCnngKq00 --nc --lmodel mistral # uses mistral (via ollama) for summarisation. the script will use OpenAI's API for the ask and embed mode (still TODO)
+    # this video in Bahasa Indonesia has no auto caption nor official subtitle, so we specify Indonesian language so Whisper's output is better
+    youtube2llm.py summarise --vid PDpyUMOOcyw --lang id
+    
+    # this video has age filter on and can't be accessed without logging in
+    youtube2llm.py summarise --vid=FbquCdNZ4LM --nc
+        pytube.exceptions.AgeRestrictedError: FbquCdNZ4LM is age restricted, and can't be accessed without logging in.
+    # in this case, I will use `yt-dlp -f` to get the audio file (m4a or mp4) and then run the audio file through audio2llm.py to transcribe it with Whisper
+    # another example of such video: https://www.youtube.com/watch?v=77ivEdhHKB0
+    
+    # # uses mistral (via ollama) for summarisation. the script will use OpenAI's API for the ask and embed mode (still TODO)
+    youtube2llm.py summarise --vid=sYmCnngKq00 --nc --lmodel mistral
     
     # run a custom prompt against an audio file (first it will retrieve the transcript from YouTube or generate the transcript using Whisper)
     youtube2llm.py summarise --vid="-3vmxQet5LA" --prompt "all the public speaking techniques and tactics shared"
@@ -197,20 +205,20 @@ def get_youtube_metadata(url, save=True):
             f.write(json.dumps(info))
     return info
 
-def process_youtube_video(url, video_id, language="en"):
+def process_youtube_video(url, video_id, language="en", force_download_audio=False):
+    caption = None
     transcript = ''
     video_title = ''
     chapters = []
     
-    caption = get_captions(video_id, language)
+    if(not force_download_audio):
+        caption = get_captions(video_id, language)
+    
     youtube_metadata = get_youtube_metadata(video_id, save=True) # returns a dict, optionally saves it into a {video_id}-metadata.json file
     chapters = get_chapters(youtube_metadata)
     video_title = youtube_metadata.get('title')
     
-    if caption:
-        # youtube caption is available, either auto caption or the one included by the video poster
-        transcript = caption
-    else:
+    if not caption or force_download_audio:
         # download the mp4 so Whisper can transcribe them
         from pytube import YouTube
         youtube_video = YouTube(url)
@@ -226,6 +234,9 @@ def process_youtube_video(url, video_id, language="en"):
         model = whisper.load_model(WHISPER_MODEL, device=devices)
         transcription = model.transcribe(OUTPUT_AUDIO.as_posix(), verbose=True, fp16=False, language=language) # language="id", or "en" by default
         transcript = transcription['text']
+    else:
+        # youtube caption is available, either auto caption or the one included by the video poster
+        transcript = caption
 
     return transcript, chapters, video_title
 
@@ -498,9 +509,14 @@ if __name__ == '__main__':
     parser.add_argument('--lmodel', type=str, default='gpt-3.5-turbo', help='the GPT model to use for summarization (default: gpt-3.5-turbo)')
     parser.add_argument('--prompt', type=str, help='prompt to use, but chapters will be concatenated as well')
     parser.add_argument('--nc', action='store_true', help="don't pass chapters to analyse")
+    parser.add_argument('--dla', action='store_true', help="download and transcribe the audio, don't use youtube auto caption")
     parser.add_argument('--lang', type=str, default='en', help='language code of the video')
     
     args = parser.parse_args()
+    
+    force_download_audio = False
+    if(args.dla):
+        force_download_audio = True
     
     if args.mode == 'summarise':
         if(args.lmodel):
@@ -513,7 +529,7 @@ if __name__ == '__main__':
                 transcript = f.read()
         else:
             video_id = args.vid
-            transcript, chapters, video_title = process_youtube_video(YOUTUBE_VIDEO_URL.format(video_id), video_id, language=args.lang)
+            transcript, chapters, video_title = process_youtube_video(YOUTUBE_VIDEO_URL.format(video_id), video_id, language=args.lang, force_download_audio=force_download_audio)
             with open('output/'+video_id+'-transcript.txt', "w") as f:
                 f.write(transcript)
         
