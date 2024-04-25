@@ -11,7 +11,7 @@ prompts = {
                     "Please produce an accurate translation of the transcribed text. "\
                     "If the text is in English, then translate to all languages you know. " \
                     "If the text is non English, please translate it to English",
-    # # perhaps same as tagging. this works but not meaningful enough
+    # perhaps same as tagging. this works but not meaningful enough
     'topix': "Extract the 3 topics / themes / concepts that you see. Please use Wikipedia's concept taxonomy for it.",
     'tag': "what are some hashtags appropriate for this?",
     'definition': "list of all definitions made in the discussion",
