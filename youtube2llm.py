@@ -8,41 +8,47 @@ Overview:
 Usage
     A. Summarising (after retrieving YouTube's subtitles or transcribing with Whisper)
     
-    # summarise a YouTube video, passing the video ID
-    youtube2llm.py summarise --vid 2JmfDKOyQcI
+    # process a YouTube video, passing the video ID. will produce a list of Q&As for the video by default when --mode is not specified
+    youtube2llm.py analyse --vid 2JmfDKOyQcI
     
-    # transcribe and summarise a podcast episode (or any audio file)
-    youtube2llm.py summarise --af ~/Documents/Podcasts/d7a205f9-90af-44df-a37b-69505a3da691_transcoded.mp3 --mode transcription
+    # process an audio file
+    youtube2llm.py analyse --af ~/Documents/Podcasts/d7a205f9-90af-44df-a37b-69505a3da691_transcoded.mp3 --mode transcription
     
-    # summarise a transcript file
-    youtube2llm.py summarise --tf output/FbquCdNZ4LM-transcript.txt
+    # process a transcript file ()
+    youtube2llm.py analyse --tf output/FbquCdNZ4LM-transcript.txt
+    
+    # produce a note for this video
+    youtube2llm.py analyse --vid Lsf166_Rd6M --nc --mode note
+
+    # produce a note for this video
+    youtube2llm.py analyse --vid Lsf166_Rd6M --nc --mode definition
 
     # don't send chapters, when it's making it too verbose or fragmented
-    youtube2llm.py summarise --vid=FbquCdNZ4LM --nc
+    youtube2llm.py analyse --vid=FbquCdNZ4LM --nc
     
     # download and transcribe the audio file (don't use YouTube's auto caption)
-    youtube2llm.py summarise --vid=MNwdq2ofxoA --nc --lmodel mistral --dla
+    youtube2llm.py analyse --vid=MNwdq2ofxoA --nc --lmodel mistral --dla
 
     # the video has no subtitle, so it falls back to Whisper that transcribes it
-    youtube2llm.py summarise --vid=TVbeikZTGKY --nc
+    youtube2llm.py analyse --vid=TVbeikZTGKY --nc
     
     # this video in Bahasa Indonesia has no auto caption nor official subtitle, so we specify Indonesian language so Whisper's output is better
-    youtube2llm.py summarise --vid PDpyUMOOcyw --lang id
+    youtube2llm.py analyse --vid PDpyUMOOcyw --lang id
     
     # this video has age filter on and can't be accessed without logging in
-    youtube2llm.py summarise --vid=FbquCdNZ4LM --nc
+    youtube2llm.py analyse --vid=FbquCdNZ4LM --nc
         pytube.exceptions.AgeRestrictedError: FbquCdNZ4LM is age restricted, and can't be accessed without logging in.
     # in this case, I will use `yt-dlp -f` to get the audio file (m4a or mp4) and then run the audio file through audio2llm.py to transcribe it with Whisper
     # another example of such video: https://www.youtube.com/watch?v=77ivEdhHKB0
     
     # # uses mistral (via ollama) for summarisation. the script will use OpenAI's API for the ask and embed mode (still TODO)
-    youtube2llm.py summarise --vid=sYmCnngKq00 --nc --lmodel mistral
+    youtube2llm.py analyse --vid=sYmCnngKq00 --nc --lmodel mistral
     
     # run a custom prompt against an audio file (first it will retrieve the transcript from YouTube or generate the transcript using Whisper)
-    youtube2llm.py summarise --vid="-3vmxQet5LA" --prompt "all the public speaking techniques and tactics shared"
+    youtube2llm.py analyse --vid="-3vmxQet5LA" --prompt "all the public speaking techniques and tactics shared"
     
     # run a custom prompt against a transcript file
-    youtube2llm.py summarise --tf output/-3vmxQet5LA-transcript.txt --prompt "1. what is the Joke Structure and 2. what is the memory palace technique"
+    youtube2llm.py analyse --tf output/-3vmxQet5LA-transcript.txt --prompt "1. what is the Joke Structure and 2. what is the memory palace technique"
     
     B. Embedding. Generates CSV file with vectors from any transcript (txt) file
     
@@ -60,7 +66,7 @@ Usage
     youtube2llm.py ask --ef output/embeddings/452f186b-54f2-4f66-a635-6e1f56afbdd4_media-transcript_embedding.csv --q "if we could distill the transcript into 4 arguments or points, what would they be?"
     
     # batching some video IDs in a text file (line-separated)
-    while read -r f || [ -n "$f" ]; do; youtube2llm.py summarise --vid="$f" --nc --lmodel mistral; done < list_of_youtube_video_ids.txt
+    while read -r f || [ -n "$f" ]; do; youtube2llm.py analyse --vid="$f" --nc --lmodel mistral; done < list_of_youtube_video_ids.txt
     
 '''
 
@@ -507,14 +513,14 @@ def ask_the_embedding(question, embeddings_filename, print_message=False):
     return ask(question, df, print_message=print_message)
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='utub - get transcript, summarise, embed, ask')
-    parser.add_argument('mode', type=str, default='ask', help='summarise, embed, ask')
+    parser = argparse.ArgumentParser(description='analyse, embed, and ask anything about the content of the youtube video')
+    parser.add_argument('action', type=str, default='ask', help='analyse, embed, ask')
     parser.add_argument('--vid', type=str, help='youtube video id') # making it optional so we can create embedding for any transcript
     parser.add_argument('--q', type=str, help='your question')
     parser.add_argument('--tf', type=str, help='transcript filename, if exists, to create embedding for. in this case, value of vid is ignored')
     parser.add_argument('--ef', type=str, help='embedding filename to use')
     # only QnAs mode is implemented at the moment. want to merge with the llm_process method in audio2llm.py
-    parser.add_argument('--lmode', type=str, default='QnAs', help='QnAs, note, summary/kp, tag, topix, thread, tp, cbb, definition, translation')
+    parser.add_argument('--mode', type=str, default='QnAs', help='QnAs, note, summary/kp, tag, topix, thread, tp, cbb, definition, translation')
     parser.add_argument('--lmodel', type=str, default='gpt-3.5-turbo', help='the GPT model to use for summarization (default: gpt-3.5-turbo)')
     parser.add_argument('--prompt', type=str, help='prompt to use, but chapters will be concatenated as well')
     parser.add_argument('--nc', action='store_true', help="don't pass chapters to analyse")
@@ -527,7 +533,7 @@ if __name__ == '__main__':
     if(args.dla):
         force_download_audio = True
     
-    if args.mode == 'summarise':
+    if args.action == 'analyse':
         if(args.lmodel):
             GPT_MODEL = args.lmodel
         chapters = []
@@ -547,12 +553,12 @@ if __name__ == '__main__':
         if(args.nc):
             with_chapters = False
         
-        llm_result = llm_process(transcript, llm_mode=args.lmode, chapters=chapters, use_chapters=with_chapters, prompt=args.prompt, video_title=video_title)
+        llm_result = llm_process(transcript, llm_mode=args.mode, chapters=chapters, use_chapters=with_chapters, prompt=args.prompt, video_title=video_title)
         print(f'LLM result for the Video:\n{llm_result}')
-        llm_result_filename = f"output/{video_id}-{args.lmode}-{args.lmodel}.md"
+        llm_result_filename = f"output/{video_id}-{args.mode}-{args.lmodel}.md"
         with open(llm_result_filename, "w") as f:
             f.write(llm_result)
-    elif args.mode == 'embed': # not sdtrong enough, TODO to refactor
+    elif args.action == 'embed': # not sdtrong enough, TODO to refactor
         if args.vid:
             transcript_id = args.vid # need this to construct the below. TODO: refactor so the file naming is more structured and simple
             transcript_filename = 'output/'+transcript_id+'-transcript.txt'
@@ -568,7 +574,7 @@ if __name__ == '__main__':
         else:
             # still WiP!
             create_embedding_ollama(transcript, transcript_id)
-    elif args.mode == 'ask':
+    elif args.action == 'ask':
         question = "what questions can I ask about what's discussed in the video so I understand the main argument and points that the speaker is making? and for each question please answer each and elaborate them in detail in the same response"
         '''
         question = 'what are the three questions that the video provide answer for? and for each question please answer each and elaborate them in detail in the same response'
@@ -613,7 +619,7 @@ TODO
     kyk tool ini https://totheweb.com/learning_center/tools-convert-html-text-to-plain-text-for-content-review/
     read a file containing a list of line-separated URLs, retrieve the text, embed, draw the underlying theme, generate a list of talking points, questions that can be answered from these articles
     help me see wider, deeper, clearer
-√ 5. tune the prompt, still seems to be patchy, not as good as the other one (wsgi_new or summarise.py). or temperature ya?
+√ 5. tune the prompt, still seems to be patchy, not as good as audio2llm.py. or is it the temperature?
     https://platform.openai.com/docs/guides/prompt-engineering/strategy-provide-reference-text
     or https://github.com/e-johnstonn/GPT-Doc-Summarizer/blob/master/my_prompts.py
 √ 6. get timestamped response to dig in. e.g. "on minute xyz they discussed this point" (perhaps incorporate as answer to my convo as per #1 ?) get ReAct / agent involved?
