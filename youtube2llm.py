@@ -241,18 +241,45 @@ def process_youtube_video(url, video_id, language="en", force_download_audio=Fal
     return transcript, chapters, video_title
 
 def llm_process(transcript, llm_mode, chapters=[], use_chapters=True, prompt='', video_title=''):
-    system_prompt = "list all the questions asked and a three-sentence answer to each (include all examples of concrete situations and stories shared in the answer)"
+    # need to refactor. I declare this as global because it's used to initiate a client object, which is used by all the llm_process, embed, and ask functionalities supported by this script
+    global GPT_MODEL
     
-    # not implemented yet
-    do_note = False
-    if (do_note):
-        # the version I have in audio2llm.py
-        system_prompt = "You are an expert at making factual, succinct, and detailed notes from transcripts. " \
-                        "You will rewrite the transcript provided into notes. Do not summarize and keep every information. "
-        # or
-        system_prompt = "You are a researcher who is an expert at making factual, succinct, and detailed notes from transcripts. " \
-                        "Do not summarize and keep every information. Do not include anything that is not in the transcript. " \
-                        "Please use bullet points to list all the relevant details."
+    system_prompt = ''
+    
+    if llm_mode in['summary', 'kp']:
+        llm_mode = 'summary'
+    
+    if(llm_mode == 'tag'):
+        GPT_MODEL = 'gpt-3.5-turbo-16k'
+    
+    # move to a separate file to be imported by other LLM scripts?
+    prompts = {
+        # default prompt, for extracting Questions in the text and generate one-sentence answers from
+        'QnAs': "list all the questions asked and a three-sentence answer to each (include all examples of concrete situations and stories shared in the answer)",
+        'note': "You are an expert at making factual, succinct, and detailed notes from transcripts. " \
+                "You will rewrite the transcript provided into notes. Do not summarize and keep every information. ",
+        'summary': "Summarise the text in first-person as if the speaker has produced a short version of the original conversation. " \
+                  "Include the anecdotes, key points, arguments, and actionable takeaways. " \
+                  "Inject some narrative and bullet points as appropriate into your summary so the summary can be easily read. " \
+                  "Please use simple language and don't repeat points you have previously made.",
+        'translation': "You are a translator who handles English to Indonesian and vice versa. " \
+                        "Please produce an accurate translation of the transcribed text. "\
+                        "If the text is in English, then translate to all languages you know. " \
+                        "If the text is non English, please translate it to English",
+        'topix': "Extract the 3 topics / themes / concepts that you see. Please use Wikipedia's concept taxonomy for it.",
+        'tag': "what are some hashtags appropriate for this?",
+        'definition': "list of all definitions made in the discussion",
+        # still very.... robotic? idk how to describe it. it's nice, but not... engaging? like first grader. lack flare, personality, hooks?
+        'thread': "Rewrite as a Twitter thread of 6 tweets or less. Be as granular as possible. " \
+                 "Speak in first person, use informal, conversational, and witty style. Write for the ears rather than for the eyes. " \
+                 "Introduce the essay with the surprising actionable takeaway and then go over the main arguments made in the essay. ",
+        # for Instagram post mostly, if not specifically
+        'tp': "Please create 2 talking points I can use for a video script through the lens of human nature based on how different arguments made in comments relate to the content and argument of the main post." \
+             "Speak in first person narrative. Use informal, conversational, and witty style. Write for the ears rather than for the eyes. " \
+             "Use active voice. Avoid passive voice as much as possible.",
+        'cbb': "Here's a news article. please turn the title of the article into a question and find the answer to the question in the text provided",
+    }
+    system_prompt = prompts[llm_mode]
     
     if(prompt):
         system_prompt = prompt
@@ -550,7 +577,8 @@ if __name__ == '__main__':
         
         llm_result = llm_process(transcript, llm_mode=args.lmode, chapters=chapters, use_chapters=with_chapters, prompt=args.prompt, video_title=video_title)
         print(f'LLM result for the Video:\n{llm_result}')
-        with open('output/'+video_id+'-'+args.lmode+'.md', "w") as f:
+        llm_result_filename = f"output/{video_id}-{args.lmode}-{args.lmodel}.md"
+        with open(llm_result_filename, "w") as f:
             f.write(llm_result)
     elif args.mode == 'embed': # not sdtrong enough, TODO to refactor
         if args.vid:
