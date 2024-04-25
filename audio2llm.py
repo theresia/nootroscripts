@@ -82,6 +82,8 @@ from pathlib import Path
 from whisper.utils import get_writer 
 from nltk import sent_tokenize # had to run nltk.download('punkt') first
 
+from prompts import prompts # we define the generic prompt for each mode here
+
 current_dir = os.path.dirname(os.path.abspath(__name__))
 
 def convert_to_ordinal(number):
@@ -230,55 +232,21 @@ def chunk_text(transcript, model_name, chunking_method='word', n_div=1):
 def llm_process(transcript, transcript_file, mode='QnAs', model='gpt-3.5-turbo', context_filename='', prompt='', output_filepath='', specific_snippet=0, chunking_method='sentence', be_thorough = False):
     input_fileext = Path(transcript_file).suffix # to check if it's md (likely an article) or txt (likely a transcript)
 
-    do_note = False
-    do_summarise = False
-    do_translate = False
-    do_topix = False
-    do_define = False
-    do_thread = False
-    do_tp = False
-    do_cbb = False
-    do_tagging = False
-    if mode in['note']:
-        do_note = True
     if mode in['summary', 'kp']:
-        do_summarise = True
-    if mode == 'translation':
-        do_translate = True
-    if mode == 'topix':
-        do_topix = True
-    if mode == 'definition':
-        do_define = True
-    if mode == 'thread':
-        do_thread = True
-    if mode == 'tp':
-        do_tp = True
-    if mode == 'cbb':
-        do_cbb = True
-        # model = 'gpt-3.5-turbo-16k' # zoom out, go high-level, as less chunking as possible # but this doesn't perform as well as vanilla turbo??
-    if mode == 'tag':
-        do_tagging = True
-        model = 'gpt-3.5-turbo-16k'
+        mode = 'summary'
     
-    ## we define the generic prompt for each mode here
+    system_content = prompts[mode]
     
-    result = ""
-    # previous = ""
+    if(mode == 'tag'):
+        model = 'gpt-3.5-turbo-16k' # zoom out, go high-level, as less chunking as possible # but this doesn't perform as well as vanilla turbo??
     
-    if('[concatenated text]' in transcript):
-        be_thorough = True
-    
-    # default prompt, for extracting Questions in the text and generate one-sentence answers from
-    # system_content = "1) state all the key arguments made, then 2) list all the questions asked and a three-sentence answer to each (include all examples of concrete situations and stories shared in the answer)"
-    system_content = "list all the questions asked and a three-sentence answer to each (include all examples of concrete situations and stories shared in the answer)"
-    
-    if (do_note):
-        system_content = "You are an expert at making factual, succinct, and detailed notes from transcripts. " \
-                        "You will rewrite the transcript provided into notes. Do not summarize and keep every information. "
+    # if producing a note for markdown, fine tune the prompt
+    if(mode == 'note'):
         if(input_fileext == '.md'):
             system_content += " Pay attention to all headings, sections, and table of content that exist in the HTML / rich text / markdown as they could be pointers for the different points and arguments."
-
-    elif (do_summarise):
+    
+    # for summary mode, we override the dict value as the prompt is quite specific whether it's a podcast transcript or a markdown from an article
+    if(mode == 'summary'):
         if(input_fileext == '.md'):
             system_content = "Summarise the text from the essay or article provided in first-person as if the author has produced a short version of the original text. "
         else:
@@ -287,20 +255,12 @@ def llm_process(transcript, transcript_file, mode='QnAs', model='gpt-3.5-turbo',
         system_content += "Include the anecdotes, key points, arguments, and actionable takeaways. " \
                           "Inject some narrative and bullet points as appropriate into your summary so the summary can be easily read. " \
                           "Please use simple language and don't repeat points you have previously made."
-
-    elif (do_translate):
-        system_content = "You are a translator who handles English to Indonesian and vice versa. " \
-                        "Please produce an accurate translation of the transcribed text. "\
-                        "If the text is in English, then translate to all languages you know. " \
-                        "If the text is non English, please translate it to English"
-
-    elif (do_tagging):
-        system_content = "what are some hashtags appropriate for this?"
-        
-    elif (do_topix): # perhaps same as tagging. this works but not meaningful enough
-        # system_content = "Please list several topics and keywords you think best represent the content of the text. List each of them in hashtags." # the wikipedia taxonomy thing
-        system_content = "Extract the 3 topics / themes / concepts that you see. Please use Wikipedia's concept taxonomy for it."
-        # if I am working with one file, I'd like it to be distilled to just three main themes. but when I'm aggregating several text from disparate pieces of texts (as is the case in IG collections analysis, I'd like it to be as thorough as possible)
+    
+    # override prompt if mode is topix and be_thorough is set to True
+    if(mode == 'topix'):
+        # if I am working with one file, I'd like it to be distilled to just three main themes.
+        # but when I'm aggregating several text from disparate pieces of texts
+        # (as is the case in IG collections analysis), I'd like it to be as thorough as possible
         if(be_thorough): # rather than be succinct, aka, for an atomic piece of text
             system_content = "Aggregate information from the provided texts and extract a comprehensive list of main topics, themes, or concepts. "\
             "Utilize Wikipedia's concept taxonomy to identify and categorize the diverse range of subjects covered. " \
@@ -308,25 +268,13 @@ def llm_process(transcript, transcript_file, mode='QnAs', model='gpt-3.5-turbo',
             "Then at the end, provide:" \
             "1. the distilled version of the deeper underlying theme of all the ideas." \
             "2. what intersections of topics are being dicussed"
-
-    elif (do_thread):
-        # still very.... robotic? idk how to describe it. it's nice, but not... engaging? like first grader. lack flare, personality, hooks?
-        system_content = "Rewrite as a Twitter thread of 6 tweets or less. " \
-                         "Speak in first person, use informal, conversational, and witty style. Write for the ears rather than for the eyes. " \
-                         "Introduce the essay with the surprising actionable takeaway and then go over the main arguments made in the essay. " \
-                         "Be as granular as possible."
-
-    elif (do_tp): # for Instagram post mostly, if not specifically
-        system_content = "Please create 2 talking points I can use for a video script through the lens of human nature based on how different arguments made in comments relate to the content and argument of the main post." \
-                         "Speak in first person narrative. Use informal, conversational, and witty style. Write for the ears rather than for the eyes. " \
-                         "Use active voice. Avoid passive voice as much as possible."
-
-    elif (do_cbb):
-        system_content = "Here's a news article. please turn the title of the article into a question and find the answer to the question in the text provided"
-
-    if (do_define):
-        system_content = "list of all definitions made in the discussion"
-
+    
+    result = ""
+    # previous = ""
+    
+    if('[concatenated text]' in transcript):
+        be_thorough = True
+    
     if(prompt):
         system_content = prompt
         result += f"prompt: {prompt}\n\n------\n\n"
