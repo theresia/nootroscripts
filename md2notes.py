@@ -45,6 +45,9 @@ import inflect
 from pathlib import Path
 from nltk import sent_tokenize # had to run nltk.download('punkt') first
 
+# NOT implemented here because I'm going to deprecate this script anyway
+from prompts import prompts # we define the generic prompt for each mode here
+
 def convert_to_ordinal(number):
     p = inflect.engine()
     ordinal = p.ordinal(number)
