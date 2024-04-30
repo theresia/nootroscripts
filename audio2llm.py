@@ -423,7 +423,7 @@ if __name__ == '__main__':
     text = ''
     output_filename_path = ''
 
-    parser = argparse.ArgumentParser(description='Whisper2Summarize - a tool for summarizing audio files')
+    parser = argparse.ArgumentParser(description='Audio2LLM - get LLM to work on your audio files. usually podcasts or call recordings')
     parser.add_argument('--mode', type=str, default='QnAs', help='transcription, QnAs, note, summary/kp, tag, topix, thread, tp, cbb, definition, translation')
     parser.add_argument('--tf', type=str, help='the transcript to process. can also pass a directory with glob')
     parser.add_argument('--af', type=str, help='the audio file to summarize')

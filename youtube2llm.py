@@ -6,26 +6,23 @@ Overview:
     I added the functionality to get the transcript from YouTube when available to save Whisper some work.
 
 Usage
-    A. Summarising (after retrieving YouTube's subtitles or transcribing with Whisper)
+    A. Summarising (after retrieving YouTube's caption/subtitles or transcribing with Whisper)
     
     # process a YouTube video, passing the video ID. will produce a list of Q&As for the video by default when --mode is not specified
     youtube2llm.py analyse --vid 2JmfDKOyQcI
     
-    # process an audio file
-    youtube2llm.py analyse --af ~/Documents/Podcasts/d7a205f9-90af-44df-a37b-69505a3da691_transcoded.mp3 --mode transcription
-    
-    # process a transcript file ()
+    # process a transcript file (e.g. when you already have the caption / transcript file saved locally, saving the web traffic calls to youtube)
     youtube2llm.py analyse --tf output/FbquCdNZ4LM-transcript.txt
+    
+    # don't send chapters, when it's making it too verbose or fragmented
+    youtube2llm.py analyse --vid=FbquCdNZ4LM --nc
     
     # produce a note for this video
     youtube2llm.py analyse --vid Lsf166_Rd6M --nc --mode note
 
-    # produce a note for this video
+    # produce a list of definitions made in this video
     youtube2llm.py analyse --vid Lsf166_Rd6M --nc --mode definition
 
-    # don't send chapters, when it's making it too verbose or fragmented
-    youtube2llm.py analyse --vid=FbquCdNZ4LM --nc
-    
     # download and transcribe the audio file (don't use YouTube's auto caption)
     youtube2llm.py analyse --vid=MNwdq2ofxoA --nc --lmodel mistral --dla
 
@@ -55,7 +52,7 @@ Usage
     # this generates output/embeddings/452f186b-54f2-4f66-a635-6e1f56afbdd4_media.mp3-transcript_embedding.csv
     youtube2llm.py embed --tf output/452f186b-54f2-4f66-a635-6e1f56afbdd4_media.mp3.txt
     
-    C. Asking the embedding file a query
+    C. Asking the embedding file a question / query
 
     # without q(uery) specified, defaults to:
         "what questions can I ask about what's discussed in the video so I understand the main argument and points that the speaker is making? and for each question please answer each and elaborate them in detail in the same response"
