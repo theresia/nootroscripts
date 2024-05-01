@@ -293,6 +293,7 @@ def llm_process(transcript, transcript_file, mode='QnAs', model='gpt-3.5-turbo',
         # - "this is a podcast transcript. please retell it highlighting the key points and arguments shared, while sticking to the narrative flow and seques, weaving the arguments together"
         # - "the speaker's insight and the stories shared that illustrates it"
         # - "quotes that reflect the speaker's insight", or "the speaker's insight followed by the quotes that reflect that insight"
+        # - "list of concepts, aphorisms, and proverbial assertions made"
     
     # stitch the final output filename
     output_filename = Path(transcript_file).stem

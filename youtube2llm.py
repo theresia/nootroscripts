@@ -68,6 +68,7 @@ Usage
 '''
 
 import os
+import hashlib
 import tiktoken
 import argparse
 import whisper
@@ -533,8 +534,11 @@ if __name__ == '__main__':
     if args.action == 'analyse':
         if(args.lmodel):
             GPT_MODEL = args.lmodel
+        
         chapters = []
         transcript = ''
+        llm_result = ''
+        
         if(args.tf and os.path.exists(args.tf)): # no need to retrieve the transcript from youtube when it has been provided
             video_id = os.path.basename(args.tf)
             with open(args.tf) as f:
@@ -550,9 +554,16 @@ if __name__ == '__main__':
         if(args.nc):
             with_chapters = False
         
+        mode = args.mode
+        if(args.prompt):
+            llm_result += f"prompt: {args.prompt}\n\n------\n\n"
+            print(f"prompt: {args.prompt}")
+            import hashlib
+            mode = f"prompt-{hashlib.md5(args.prompt.encode('utf-8')).hexdigest()}"
+        
         llm_result = llm_process(transcript, llm_mode=args.mode, chapters=chapters, use_chapters=with_chapters, prompt=args.prompt, video_title=video_title)
         print(f'LLM result for the Video:\n{llm_result}')
-        llm_result_filename = f"output/{video_id}-{args.mode}-{args.lmodel}.md"
+        llm_result_filename = f"output/{video_id}-{mode}-{args.lmodel}.md"
         with open(llm_result_filename, "w") as f:
             f.write(llm_result)
     elif args.action == 'embed': # not sdtrong enough, TODO to refactor
