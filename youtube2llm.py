@@ -566,7 +566,7 @@ if __name__ == '__main__':
         with open(transcript_filename) as f:
             transcript = f.read()
         # print(f'Transcript acquired: \n{transcript}')
-        if('gpt' in GPT_MODEL and 'ada-002' in EMBEDDING_MODEL):
+        if('gpt' in GPT_MODEL and 'text-embedding' in EMBEDDING_MODEL):
             create_embedding(transcript, transcript_id)
         else:
             # still WiP!
@@ -623,12 +623,12 @@ TODO
 √ 7. try this https://github.com/openai/openai-cookbook/blob/main/examples/RAG_with_graph_db.ipynb # implemented elsewhere (see *embedding*.py)
 √ 8. and this https://github.com/openai/openai-cookbook/blob/main/examples/Recommendation_using_embeddings.ipynb # implemented elsewhere (see *embedding*.py)
 ~ 9. implement / port this on other local model (mistral, llama2, etc) so the cost is managed
+    the embed and ask results are pretty shit with ollama mistral. see create_embedding_ollama
+        oh, ollama mistral nggak utk embedding kyknya sih. need to probably do the bge version I had working... somewhere... haha
+    here, find chromadb https://howaibuildthis.substack.com/p/choosing-the-right-embedding-model
     2024-04-02:
     - done for the `summarize` mode
     - still TODO for the `ask` and `embed` modes
-    here, find chromadb https://howaibuildthis.substack.com/p/choosing-the-right-embedding-model
-    the embed and ask results are pretty shit with ollama mistral. see create_embedding_ollama
-        oh, ollama mistral nggak utk embedding kyknya sih. need to probably do the bge version I had working... somewhere... haha
 √ 10. image recognition? I want to process my screenshots and stuff # got a version of LLaVA working locally and two scripts using OpenAI's Vision for image and video
     start here:
 	* https://huggingface.co/docs/transformers/main/tasks/image_captioning
@@ -640,7 +640,16 @@ TODO
 	* https://github.com/facebookresearch/ImageBind # to try the tutorial https://itnext.io/imagebind-one-embedding-space-to-bind-them-all-b48c8623d39b
 	* https://platform.openai.com/docs/guides/vision # reading and processing images
 	* https://platform.openai.com/docs/guides/images/introduction?context=node # generating images
-11. the LLM output of youtube2llm.py is quite high-level, vague, and not as good (refined, granular, precise) as the audio2llm.py.
+√ 11. the LLM output of youtube2llm.py is quite high-level, vague, and not as good (refined, granular, precise) as the audio2llm.py.
     need to check if it's the prompt, the chunking strategy, the context window, or what. seems like it's a combination all of them sih.
-12. refactor the output directory
+    OK refactored the prompts and modes out of audio2llm.py to a separate file (prompts.py) and allow youtube2llm.py to use them.
+    chunking method and size is already the same between these scripts
+12. refactor the output directory # can't remember what this is about, is it just adding output_dir to the args? or to not hardcode some of the paths here?
+13. allow running an `ask` mode on a video without having to explicitly call `analyse` and then `embed` beforehand
+    i.e.:
+        ./youtube2llm.py analyse --vid=zt6i6vVgiO4 --nc --lmodel mistral
+        ./youtube2llm.py embed --tf=output/zt6i6vVgiO4-transcript.txt
+        ./youtube2llm.py ask --ef=output/embeddings/zt6i6vVgiO4-transcript-transcript_embedding.csv --q "what are the three depression subtypes and the way depression manifests in Earth, Wind, or Fire types?"
+    became
+        ./youtube2llm.py ask --vid=zt6i6vVgiO4 --nc --lmodel mistral --q "what are the three depression subtypes and the way depression manifests in Earth, Wind, or Fire types?"
 '''
