@@ -59,6 +59,8 @@ The project will also download:
 ./md2notes.py --help
 ```
 
+Guide for [youtube2llm.py here](https://proses.id/nootroscripts-2)
+
 TODO
 
 ## Philosophy
@@ -67,11 +69,19 @@ Local first. Have things to reference back to, excerpt, take notes on. Extended 
 
 Perfect for journalists and researchers who want to optimise for thoroughness in their workflow when consuming media.
 
-These scripts
+## Backstory
+
+Initially I thought these scripts will save me so much time by allowing me to get the knowledge without having to listen to the podcast episode, watch the video, or read the article.
+
+But over time I realised that these summaries/notes/text help me synthesise the information more. They serve as notes to refer back to, skim, refresh my mind of the ideas introduced.
+
+Yes, these scripts
 - help get the nuggets from non-fiction content
 - help me persist the ideas and insights into something I can rediscover
 - help me manage cognitive load. this is basically a RIL-on-steroid (RIL: Read It Later)
 - help me indulge my tsundoku and snoozing/JIC tendency, ^^; (JIC: Just In Case)
+
+But I didn't exactly learn more efficiently. I just learn more effectively. And I think that's a better accidental outcome.
 
 For more context, see blogpost: http://proses.id/nootroscripts/
 
