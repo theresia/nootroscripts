@@ -78,7 +78,7 @@ import pandas as pd # for storing text and embeddings data
 
 from pathlib import Path
 from scipy import spatial  # for calculating vector similarities for search
-from yt_dlp import YoutubeDL # I only use YoutubeDL to retrieve the chapters and the title of the video
+from yt_dlp import YoutubeDL, DownloadError # I only use YoutubeDL to retrieve the chapters and the title of the video
 # from openai.embeddings_utils import cosine_similarity, get_embedding # not used yet,
 #       see https://platform.openai.com/docs/guides/embeddings/use-cases > text search using embeddings
 #       and https://cookbook.openai.com/examples/recommendation_using_embeddings
@@ -87,7 +87,6 @@ from prompts import prompts
 YOUTUBE_VIDEO_URL = "https://www.youtube.com/watch?v={}"
 
 ## summarization-related
-WHISPER_MODEL = 'base' # tiny base small medium large
 GPT_MODEL = 'gpt-3.5-turbo'
 
 ## embedding-related.
@@ -210,7 +209,7 @@ def get_youtube_metadata(url, save=True):
             f.write(json.dumps(info))
     return info
 
-def process_youtube_video(url, video_id, language="en", force_download_audio=False):
+def process_youtube_video(url, video_id, language="en", force_download_audio=False, transcription_model='base'):
     caption = None
     transcript = ''
     video_title = ''
@@ -219,6 +218,10 @@ def process_youtube_video(url, video_id, language="en", force_download_audio=Fal
     if(not force_download_audio):
         caption = get_captions(video_id, language)
     
+    import torch
+    devices = torch.device("cuda:0" if torch.cuda.is_available() else "cpu") 
+    model = whisper.load_model(transcription_model, device=devices)
+
     youtube_metadata = get_youtube_metadata(video_id, save=True) # returns a dict, optionally saves it into a {video_id}-metadata.json file
     chapters = get_chapters(youtube_metadata)
     video_title = youtube_metadata.get('title')
@@ -226,18 +229,26 @@ def process_youtube_video(url, video_id, language="en", force_download_audio=Fal
     if not caption or force_download_audio:
         # download the mp4 so Whisper can transcribe them
         from pytube import YouTube
+        print(url)
         youtube_video = YouTube(url)
         video_id = youtube_video.vid_info.get('videoDetails').get('videoId')
-        streams = youtube_video.streams.filter(only_audio=True)
-        # taking first object of lowest quality
-        stream = streams.first()
-        OUTPUT_AUDIO = Path(__file__).resolve().parent.joinpath('output', video_id+'.mp4')
-        stream.download(filename=OUTPUT_AUDIO)
+        if(True): # use pytube
+            # this breaks since 2024-05-07. open issue (with a quick fix workaround done on cipher.py) at: https://github.com/pytube/pytube/issues/1918
+            streams = youtube_video.streams.filter(only_audio=True)
+            stream = streams.first() # taking first object of lowest quality
+            OUTPUT_AUDIO = Path(__file__).resolve().parent.joinpath('output', video_id+'.mp4')
+            stream.download(filename=OUTPUT_AUDIO)
+            transcription = model.transcribe(OUTPUT_AUDIO.as_posix(), verbose=True, fp16=False, language=language) # language="id", or "en" by default
+        else: # use yt-dlp, based on one version of workaround in pytube/issues/#1918
+            import tempfile
+            with tempfile.TemporaryDirectory() as temporary_directory:
+                audio_details = download_youtube_mp3(video_id, temporary_directory)
+                '''
+                with open(audio_details["file_path"], "rb") as f:
+                    bytes_data = f.read()
+                '''
+                transcription = model.transcribe(audio_details["file_path"], verbose=True, fp16=False, language=language) # language="id", or "en" by default
         
-        import torch
-        devices = torch.device("cuda:0" if torch.cuda.is_available() else "cpu") 
-        model = whisper.load_model(WHISPER_MODEL, device=devices)
-        transcription = model.transcribe(OUTPUT_AUDIO.as_posix(), verbose=True, fp16=False, language=language) # language="id", or "en" by default
         transcript = transcription['text']
     else:
         # youtube caption is available, either auto caption or the one included by the video poster
@@ -245,6 +256,32 @@ def process_youtube_video(url, video_id, language="en", force_download_audio=Fal
 
     return transcript, chapters, video_title
 
+def download_youtube_mp3(video_id, temporary_directory):
+    url = f"https://www.youtube.com/watch?v={video_id}"
+    ydl_opts = {
+        "format": 'bestaudio/best',
+        "max_filesize": 20 * 1024 * 1024,
+        "outtmpl": f"{temporary_directory}/%(id)s.%(ext)s",
+        "noplaylist": True,
+        "verbose": True,
+        "postprocessors": [{
+            'key': 'FFmpegExtractAudio',
+            'preferredcodec': 'mp3',
+            'preferredquality': '192',
+        }],
+    }
+    ydl = YoutubeDL(ydl_opts)
+    try:
+        meta = ydl.extract_info(url, download=True)
+    except DownloadError as e:
+        raise e
+    else:
+        video_id = meta["id"]
+        return {
+            "title": meta["title"],
+            "file_path": f"{temporary_directory}/{video_id}.mp3"
+        }
+        
 def llm_process(transcript, llm_mode, chapters=[], use_chapters=True, prompt='', video_title=''):
     # need to refactor. I declare this as global because it's used to initiate a client object, which is used by all the llm_process, embed, and ask functionalities supported by this script
     global GPT_MODEL
@@ -518,6 +555,7 @@ if __name__ == '__main__':
     parser.add_argument('--tf', type=str, help='transcript filename, if exists, to create embedding for. in this case, value of vid is ignored')
     parser.add_argument('--ef', type=str, help='embedding filename to use')
     # only QnAs mode is implemented at the moment. want to merge with the llm_process method in audio2llm.py
+    parser.add_argument('--tmodel', type=str, default='base', help='the Whisper model to use for transcription (tiny/base/small/medium/large. default: base)')
     parser.add_argument('--mode', type=str, default='QnAs', help='QnAs, note, summary/kp, tag, topix, thread, tp, cbb, definition, translation')
     parser.add_argument('--lmodel', type=str, default='gpt-3.5-turbo', help='the GPT model to use for summarization (default: gpt-3.5-turbo)')
     parser.add_argument('--prompt', type=str, help='prompt to use, but chapters will be concatenated as well')
@@ -545,7 +583,7 @@ if __name__ == '__main__':
                 transcript = f.read()
         else:
             video_id = args.vid
-            transcript, chapters, video_title = process_youtube_video(YOUTUBE_VIDEO_URL.format(video_id), video_id, language=args.lang, force_download_audio=force_download_audio)
+            transcript, chapters, video_title = process_youtube_video(YOUTUBE_VIDEO_URL.format(video_id), video_id, language=args.lang, force_download_audio=force_download_audio, transcription_model=args.tmodel)
             with open('output/'+video_id+'-transcript.txt', "w") as f:
                 f.write(transcript)
         
