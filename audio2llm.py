@@ -211,9 +211,20 @@ def chunk_text(transcript, model_name, chunking_method='word', n_div=1):
     # when working with youtube transcripts, this mode is preferred
     else: # if('word' in chunking_method):
         # n = 700 # so the response can be longer and more detailed
-        n = int(1000/n_div)
-        if(model_name.endswith('-16k') or model_name.endswith('-1106')):
-            n = int(5000/n_div)
+        # n = 1300 # the sweet spot for 4096 context window length
+        # TODO: I need to refactor these context window length to some JSON, to adjust the chunking strategy accordingly...
+        # thoughts: most of the times I process talks and podcasts, so less context need to be retained,
+        #     and granularity is more important, so smaller chunk size is OK?
+        # n = int(1300/n_div) # gpt-3.5-turbo is now 16385, same with the -16k (I checked on 20240512: https://platform.openai.com/docs/models). I think it was 4096 before... wow, these values are so outdated already. so does it mean I can multiply the 1300 n value by 4?
+        # if(model_name.endswith('-16k') or model_name.endswith('-1106')): # 16385
+        n = int(5000/n_div) # sweet spot for 16385? but lose granularity?
+        if(model_name == 'gpt-4o' or model_name == 'gpt-4-turbo'): # 128k
+            n = int(4000/n_div) # is 40k this a good value for 128k context window size?
+            # 20k is better than 40k. more granular
+            # 15k is the best for the Perell - Shaan master storytelling episode. because word count of transcript is 24077?
+            # but 10k is the best for the Ken Liu episode on thegradient? because word count of transcript is 19844?
+        elif(model_name == 'gpt-4'): # 8192
+            n = int(2500/n_div)
         print(f"n used: {n}")
         # 1300 used to work fine for turbo (or any other models that supports 4096 tokens of context window)
         #   but when I summarised some HN threads, it had some hiccups (context limit hit) (can perhaps use the 16k for HN threads?)
@@ -314,6 +325,9 @@ def llm_process(transcript, transcript_file, mode='QnAs', model='gpt-3.5-turbo',
         return
     
     ## stitch any additional context needed to be added onto the prompt
+    # comments file isn't supported here, but only 1-2 times that I need it
+    #   (when I feel the output of collect-single isn't enough to analyse
+    #   layered and subtext-ed clips, e.g. my_cols/funny/C7eDtdFxiGQ.txt and C7qFRKkNiZu.txt)
     
     additional_context = ''
     if(context_filename and os.path.exists(context_filename)):
@@ -325,7 +339,7 @@ def llm_process(transcript, transcript_file, mode='QnAs', model='gpt-3.5-turbo',
                         additional_context += k + ': ' + ', '.join(v) + "\n"
                     if(type(v) == str):
                         additional_context += k + ': ' + v + "\n"
-        transcript = additional_context + "\n" + transcript
+        transcript = transcript + "\n\n----\n\nSome additional context for the transcript: " + additional_context
 
     ## chunking, to manage token limit
 
