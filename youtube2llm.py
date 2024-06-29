@@ -14,6 +14,9 @@ Usage
     # process a transcript file (e.g. when you already have the caption / transcript file saved locally, saving the web traffic calls to youtube)
     youtube2llm.py analyse --tf output/FbquCdNZ4LM-transcript.txt
     
+    # have the LLM use some tones/personalities specified in the system prompts
+    youtube2llm.py analyse --nc --lmodel mistral --lmtone doubtful_stylistic_british --vid=6KeiPitz5QM
+    
     # don't send chapters, when it's making it too verbose or fragmented
     youtube2llm.py analyse --vid=FbquCdNZ4LM --nc
     
@@ -82,7 +85,7 @@ from yt_dlp import YoutubeDL, DownloadError # I only use YoutubeDL to retrieve t
 # from openai.embeddings_utils import cosine_similarity, get_embedding # not used yet,
 #       see https://platform.openai.com/docs/guides/embeddings/use-cases > text search using embeddings
 #       and https://cookbook.openai.com/examples/recommendation_using_embeddings
-from prompts import prompts
+from prompts import system_prompts, user_prompts
 
 YOUTUBE_VIDEO_URL = "https://www.youtube.com/watch?v={}"
 
@@ -185,7 +188,8 @@ def get_captions(video_id, language="en"):
     for t in transcripts:
         print ("transcript found for language: "+t.language_code)
         # wait, I'm returning the LAST transcript this video has? haha. wrong. but okay works most of the time, for EN language
-        if(t.language_code == language): # ok fixed the above. mestinya ada method yg langsung akses based on language code sih, but I just want this to work for now
+        if(t.language_code == language.lower()): # ok fixed the above. mestinya ada method yg langsung akses based on language code sih, but I just want this to work for now
+            # print(f"{t.language_code}, {language}")
             raw_caption = t.fetch()
     
     if raw_caption:
@@ -282,7 +286,7 @@ def download_youtube_mp3(video_id, temporary_directory):
             "file_path": f"{temporary_directory}/{video_id}.mp3"
         }
         
-def llm_process(transcript, llm_mode, chapters=[], use_chapters=True, prompt='', video_title=''):
+def llm_process(transcript, llm_mode, chapters=[], use_chapters=True, prompt='', video_title='', llm_personality='doubtful_stylistic_british'):
     # need to refactor. I declare this as global because it's used to initiate a client object, which is used by all the llm_process, embed, and ask functionalities supported by this script
     global GPT_MODEL
     
@@ -292,21 +296,24 @@ def llm_process(transcript, llm_mode, chapters=[], use_chapters=True, prompt='',
     if(llm_mode == 'tag'):
         GPT_MODEL = 'gpt-3.5-turbo-16k'
     
-    system_prompt = prompts[llm_mode]
+    system_prompt = system_prompts[llm_personality]
+    
+    user_prompt = user_prompts[llm_mode]
     
     if(prompt):
-        system_prompt = prompt
+        user_prompt = prompt
     
     if(use_chapters and chapters):
         chapters_string = "\n".join(chapters)
-        system_prompt += f" These are the different topics discussed in the conversation:\n{chapters_string}.\nPlease orient the summary and organise them into different sections based on each topic."
-        print("system_prompt: "+system_prompt)
+        user_prompt += f" These are the different topics discussed in the conversation:\n{chapters_string}.\nPlease orient the summary and organise them into different sections based on each topic."
+        print("user_prompt: "+user_prompt)
 
     # result=""
     # previous = ""
-    result = "System Prompt: "+system_prompt+"\n-------\n"
+    result = "System Prompt: "+system_prompt+"\n\n-------\n"
+    result = result + "User Prompt: "+user_prompt+"\n\n-------\n"
     if(video_title):
-        result += "video_title: " + video_title+"\n-------\n"
+        result += "video_title: " + video_title+"\n\n-------\n"
 
     ## Chunking. For managing token limit, e.g.
     #   openai.BadRequestError: Error code: 400 - {'error': {'message': "This model's maximum context length is 16385 tokens. However, your messages resulted in 36153 tokens. Please reduce the length of the messages.", 'type': 'invalid_request_error', 'param': 'messages', 'code': 'context_length_exceeded'}}
@@ -314,7 +321,7 @@ def llm_process(transcript, llm_mode, chapters=[], use_chapters=True, prompt='',
     #   openai.RateLimitError: Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-3.5-turbo-16k in organization org-xxxx on tokens_usage_based per min: Limit 60000, Used 22947, Requested 45463. Please try again in 8.41s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens_usage_based', 'param': None, 'code': 'rate_limit_exceeded'}}
     
     n = 1300
-    if(GPT_MODEL.endswith('-16k') or GPT_MODEL.endswith('-1106')):
+    if(GPT_MODEL == 'gpt-4o' or GPT_MODEL.endswith('-16k') or GPT_MODEL.endswith('-1106')):
         # n = 10000 # maximum context length is 16385 for gpt-3.5-turbo-16k, and 4097 for gpt-3.5-turbo
         n = 5300 # the response was stifled when it was 10k before
     print(f"n used: {n}")
@@ -335,7 +342,7 @@ def llm_process(transcript, llm_mode, chapters=[], use_chapters=True, prompt='',
                         {"role": "system", "content": system_prompt},
                         {
                             "role": "user",
-                            "content": "\"" + snippet[i] + "\"\n Do not include anything that is not in the transcript."
+                            "content": user_prompt + "\n\n\"" + snippet[i] + "\"\n Do not include anything that is not in the transcript."
                             # "content": "\"" + snippet[i] + "\"\n Do not include anything that is not in the transcript. For additional context here is the previous written message: \n " + previous
                         }
                     ]
@@ -352,7 +359,7 @@ def llm_process(transcript, llm_mode, chapters=[], use_chapters=True, prompt='',
                     model=GPT_MODEL,
                     messages=[
                         {'role': 'system', 'content': system_prompt},
-                        {"role": "user", "content": "\"" + snippet[i]}
+                        {"role": "user", "content": user_prompt + "\n\n\"" + snippet[i]}
                         # {"role": "user", "content": "\"" + snippet[i] + "\"\n For additional context here is the previous written message: \n " + previous}
                     ],
                     max_tokens=4096,
@@ -557,6 +564,7 @@ if __name__ == '__main__':
     # only QnAs mode is implemented at the moment. want to merge with the llm_process method in audio2llm.py
     parser.add_argument('--tmodel', type=str, default='base', help='the Whisper model to use for transcription (tiny/base/small/medium/large. default: base)')
     parser.add_argument('--mode', type=str, default='QnAs', help='QnAs, note, summary/kp, tag, topix, thread, tp, cbb, definition, translation')
+    parser.add_argument('--lmtone', type=str, default='default', help="customise LLM's tone. doubtful_stylistic_british is one you can use")
     parser.add_argument('--lmodel', type=str, default='gpt-3.5-turbo', help='the GPT model to use for summarization (default: gpt-3.5-turbo)')
     parser.add_argument('--prompt', type=str, help='prompt to use, but chapters will be concatenated as well')
     parser.add_argument('--nc', action='store_true', help="don't pass chapters to analyse")
@@ -599,7 +607,7 @@ if __name__ == '__main__':
             import hashlib
             mode = f"prompt-{hashlib.md5(args.prompt.encode('utf-8')).hexdigest()}"
         
-        llm_result = llm_process(transcript, llm_mode=args.mode, chapters=chapters, use_chapters=with_chapters, prompt=args.prompt, video_title=video_title)
+        llm_result = llm_process(transcript, llm_mode=args.mode, chapters=chapters, use_chapters=with_chapters, prompt=args.prompt, video_title=video_title, llm_personality=args.lmtone)
         print(f'LLM result for the Video:\n{llm_result}')
         llm_result_filename = f"output/{video_id}-{mode}-{args.lmodel}.md"
         with open(llm_result_filename, "w") as f:

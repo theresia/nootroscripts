@@ -183,9 +183,39 @@ def get_transcript(transcript_file, convert_md=False, ignore_links=True):
 
     return transcript_text
 
+def determine_chunk_size(word_count, desired_chunk_sizes = [7000, 5000, 10000, 15000, 20000]):
+    """
+    Determine the best chunk size based on the word count of the transcript and desired chunk sizes.
+        (biased towards smaller values, granular. not the other way around)
+        is it useful to add / use "max number of chunks"?
+        or... can determine the list of desired_chunk_sizes based on the context window size for the model
+    
+    Args:
+    word_count (int): The total word count of the transcript.
+    desired_chunk_sizes (list of int): A list of desired chunk sizes.
+    
+    Returns:
+    int: The best chunk size.
+    """
+    best_chunk_size = desired_chunk_sizes[0]
+    print(f"best_chunk_size: {best_chunk_size}")
+    smallest_remainder = word_count % best_chunk_size
+    
+    for chunk_size in desired_chunk_sizes:
+        print(f"chunk_size: {chunk_size}")
+        remainder = word_count % chunk_size
+        if remainder < smallest_remainder:
+            smallest_remainder = remainder
+            best_chunk_size = chunk_size
+    
+    return best_chunk_size
+
 def chunk_text(transcript, model_name, chunking_method='word', n_div=1):
     # TOKEN MATH: about 0.75 words per token, in general
     snippet = []
+    
+    split_transcript = transcript.split()
+    print("word count of transcript (split_transcript): "+str(len(split_transcript))) # this is basically the number of space-separated words found in the text kan?
     
     ### sentence chunking method (NLTK sent_tokenize)
     # note that this mode of chunking is not suitable for youtube transcripts (has no punctuations, so it will likely end up as a huge block of text)
@@ -217,14 +247,18 @@ def chunk_text(transcript, model_name, chunking_method='word', n_div=1):
         #     and granularity is more important, so smaller chunk size is OK?
         # n = int(1300/n_div) # gpt-3.5-turbo is now 16385, same with the -16k (I checked on 20240512: https://platform.openai.com/docs/models). I think it was 4096 before... wow, these values are so outdated already. so does it mean I can multiply the 1300 n value by 4?
         # if(model_name.endswith('-16k') or model_name.endswith('-1106')): # 16385
-        n = int(5000/n_div) # sweet spot for 16385? but lose granularity?
+        # n = int(5000/n_div) # sweet spot for 16385? but lose granularity?
+        n = int(determine_chunk_size(len(split_transcript))/n_div) # is 40k a good value for 128k context window size?
         if(model_name == 'gpt-4o' or model_name == 'gpt-4-turbo'): # 128k
-            n = int(4000/n_div) # is 40k this a good value for 128k context window size?
-            # 20k is better than 40k. more granular
-            # 15k is the best for the Perell - Shaan master storytelling episode. because word count of transcript is 24077?
-            # but 10k is the best for the Ken Liu episode on thegradient? because word count of transcript is 19844?
+            n = int(determine_chunk_size(len(split_transcript))/n_div)
+            # n = int(7000/n_div)
+                # is 40k a good value for 128k context window size?
+                # 20k is better than 40k. more granular
+                # 15k is the best for the Perell - Shaan master storytelling episode. because word count of transcript is 24077?
+                # but 10k is the best for the Ken Liu episode on thegradient? because word count of transcript is 19844?
         elif(model_name == 'gpt-4'): # 8192
-            n = int(2500/n_div)
+            # n = int(2500/n_div)
+            n = int(determine_chunk_size(len(split_transcript))/n_div)
         print(f"n used: {n}")
         # 1300 used to work fine for turbo (or any other models that supports 4096 tokens of context window)
         #   but when I summarised some HN threads, it had some hiccups (context limit hit) (can perhaps use the 16k for HN threads?)
@@ -233,8 +267,6 @@ def chunk_text(transcript, model_name, chunking_method='word', n_div=1):
         #   if I changed this to 3300 for gpt-3.5-turbo-0613, the response would get truncated. ok2 kewl, got it
         # but the result note is not as good when we have more chunks (it's less detailed). hmm. what's the sweet spot?
         #   tergantung use case sih kyknya
-        split_transcript = transcript.split()
-        print("word count of transcript (split_transcript): "+str(len(split_transcript))) # this is basically the number of space-separated words found in the text kan?
         snippet = [' '.join(split_transcript[i:i+n]) for i in range(0,len(split_transcript),n)] # create x list of words that when concatenated with ' ' will be < n?
         print("number of snippets produced by words chunking method: "+str(len(snippet)))
         
