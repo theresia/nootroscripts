@@ -82,7 +82,7 @@ from pathlib import Path
 from whisper.utils import get_writer 
 from nltk import sent_tokenize # had to run nltk.download('punkt') first
 
-from prompts import prompts # we define the generic prompt for each mode here
+from prompts import user_prompts # we define the generic prompt for each mode here
 
 current_dir = os.path.dirname(os.path.abspath(__name__))
 
@@ -248,9 +248,11 @@ def chunk_text(transcript, model_name, chunking_method='word', n_div=1):
         # n = int(1300/n_div) # gpt-3.5-turbo is now 16385, same with the -16k (I checked on 20240512: https://platform.openai.com/docs/models). I think it was 4096 before... wow, these values are so outdated already. so does it mean I can multiply the 1300 n value by 4?
         # if(model_name.endswith('-16k') or model_name.endswith('-1106')): # 16385
         # n = int(5000/n_div) # sweet spot for 16385? but lose granularity?
-        n = int(determine_chunk_size(len(split_transcript))/n_div) # is 40k a good value for 128k context window size?
+        # n = int(determine_chunk_size(len(split_transcript))/n_div) # is 40k a good value for 128k context window size?
+        n = 1300
         if(model_name == 'gpt-4o' or model_name == 'gpt-4-turbo'): # 128k
             n = int(determine_chunk_size(len(split_transcript))/n_div)
+            n = 4000
             # n = int(7000/n_div)
                 # is 40k a good value for 128k context window size?
                 # 20k is better than 40k. more granular
@@ -278,7 +280,7 @@ def llm_process(transcript, transcript_file, mode='QnAs', model='gpt-3.5-turbo',
     if mode in['summary', 'kp']:
         mode = 'summary'
     
-    system_content = prompts[mode]
+    system_content = user_prompts[mode]
     
     if(mode == 'tag'):
         model = 'gpt-3.5-turbo-16k' # zoom out, go high-level, as less chunking as possible # but this doesn't perform as well as vanilla turbo??
