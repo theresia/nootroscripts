@@ -91,6 +91,7 @@ YOUTUBE_VIDEO_URL = "https://www.youtube.com/watch?v={}"
 
 ## summarization-related
 GPT_MODEL = 'gpt-3.5-turbo'
+GPT_MODEL = 'gpt-4o'
 
 ## embedding-related.
 ## reference: https://platform.openai.com/docs/guides/embeddings/embedding-models
@@ -565,7 +566,7 @@ if __name__ == '__main__':
     parser.add_argument('--tmodel', type=str, default='base', help='the Whisper model to use for transcription (tiny/base/small/medium/large. default: base)')
     parser.add_argument('--mode', type=str, default='QnAs', help='QnAs, note, summary/kp, tag, topix, thread, tp, cbb, definition, translation')
     parser.add_argument('--lmtone', type=str, default='default', help="customise LLM's tone. doubtful_stylistic_british is one you can use")
-    parser.add_argument('--lmodel', type=str, default='gpt-3.5-turbo', help='the GPT model to use for summarization (default: gpt-3.5-turbo)')
+    parser.add_argument('--lmodel', type=str, default='gpt-4o', help='the GPT model to use for summarization (default: gpt-4o)')
     parser.add_argument('--prompt', type=str, help='prompt to use, but chapters will be concatenated as well')
     parser.add_argument('--nc', action='store_true', help="don't pass chapters to analyse")
     parser.add_argument('--dla', action='store_true', help="download and transcribe the audio, don't use youtube auto caption")
@@ -578,7 +579,7 @@ if __name__ == '__main__':
         force_download_audio = True
     
     if args.action == 'analyse':
-        if(args.lmodel):
+        if(args.lmodel): # hackish because I haven't made GPT_MODEL local (still global)
             GPT_MODEL = args.lmodel
         
         chapters = []

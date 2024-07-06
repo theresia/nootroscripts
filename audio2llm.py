@@ -246,11 +246,10 @@ def chunk_text(transcript, model_name, chunking_method='word', n_div=1):
         # thoughts: most of the times I process talks and podcasts, so less context need to be retained,
         #     and granularity is more important, so smaller chunk size is OK?
         # n = int(1300/n_div) # gpt-3.5-turbo is now 16385, same with the -16k (I checked on 20240512: https://platform.openai.com/docs/models). I think it was 4096 before... wow, these values are so outdated already. so does it mean I can multiply the 1300 n value by 4?
-        # if(model_name.endswith('-16k') or model_name.endswith('-1106')): # 16385
-        # n = int(5000/n_div) # sweet spot for 16385? but lose granularity?
-        # n = int(determine_chunk_size(len(split_transcript))/n_div) # is 40k a good value for 128k context window size?
         n = 1300
-        if(model_name == 'gpt-4o' or model_name == 'gpt-4-turbo'): # 128k
+        if(model_name.endswith('-16k') or model_name.endswith('-1106')): # 16385
+            n = int(5000/n_div) # sweet spot for 16385? but lose granularity?
+        elif(model_name == 'gpt-4o' or model_name == 'gpt-4-turbo'): # 128k
             n = int(determine_chunk_size(len(split_transcript))/n_div)
             n = 4000
             # n = int(7000/n_div)
@@ -274,7 +273,7 @@ def chunk_text(transcript, model_name, chunking_method='word', n_div=1):
         
     return snippet
 
-def llm_process(transcript, transcript_file, mode='QnAs', model='gpt-3.5-turbo', context_filename='', prompt='', output_filepath='', specific_snippet=0, chunking_method='sentence', be_thorough = False):
+def llm_process(transcript, transcript_file, mode='QnAs', model='gpt-4o', context_filename='', prompt='', output_filepath='', specific_snippet=0, chunking_method='sentence', be_thorough = False):
     input_fileext = Path(transcript_file).suffix # to check if it's md (likely an article) or txt (likely a transcript)
 
     if mode in['summary', 'kp']:
@@ -478,7 +477,7 @@ if __name__ == '__main__':
     parser.add_argument('--af', type=str, help='the audio file to summarize')
     parser.add_argument('--prompt', type=str, help='the prompt to use in lieu of the default ones')
     parser.add_argument('--be_thorough', action='store_true', help='(currently only) for topix mode, longer prompt, more elaborate analysis')
-    parser.add_argument('--lmodel', type=str, default='gpt-3.5-turbo', help='the GPT model to use for summarization (default: gpt-3.5-turbo)')
+    parser.add_argument('--lmodel', type=str, default='gpt-4o', help='the GPT model to use for summarization (default: gpt-4o)')
     parser.add_argument('--tmodel', type=str, default='base', help='the Whisper model to use for transcription (default: base)')
     parser.add_argument('--cf', type=str, help='the additional context file to use (JSON)')
     parser.add_argument('--save', action='store_true', help='if working with multiple files, should it save the concatenated text?')
