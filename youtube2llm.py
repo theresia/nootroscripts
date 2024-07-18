@@ -295,7 +295,8 @@ def llm_process(transcript, llm_mode, chapters=[], use_chapters=True, prompt='',
         llm_mode = 'summary'
     
     if(llm_mode == 'tag'):
-        GPT_MODEL = 'gpt-3.5-turbo-16k'
+        # GPT_MODEL = 'gpt-3.5-turbo-16k'
+        GPT_MODEL = 'gpt-4o'
     
     system_prompt = system_prompts[llm_personality]
     
@@ -343,7 +344,7 @@ def llm_process(transcript, llm_mode, chapters=[], use_chapters=True, prompt='',
                         {"role": "system", "content": system_prompt},
                         {
                             "role": "user",
-                            "content": user_prompt + "\n\n\"" + snippet[i] + "\"\n Do not include anything that is not in the transcript."
+                            "content": user_prompt + "\n\n\"" + "Video Title: " + video_title + "\n\n" + snippet[i] + "\"\n Do not include anything that is not in the transcript."
                             # "content": "\"" + snippet[i] + "\"\n Do not include anything that is not in the transcript. For additional context here is the previous written message: \n " + previous
                         }
                     ]
@@ -360,14 +361,14 @@ def llm_process(transcript, llm_mode, chapters=[], use_chapters=True, prompt='',
                     model=GPT_MODEL,
                     messages=[
                         {'role': 'system', 'content': system_prompt},
-                        {"role": "user", "content": user_prompt + "\n\n\"" + snippet[i]}
+                        {"role": "user", "content": user_prompt + "\n\n\"" + "Video Title: " + video_title + "\n\n" + snippet[i]}
                         # {"role": "user", "content": "\"" + snippet[i] + "\"\n For additional context here is the previous written message: \n " + previous}
                     ],
-                    max_tokens=4096,
+                    # max_tokens=4096,
                     temperature=0
                 )
                 # previous = response.choices[0].message.content
-                result += response.choices[0].message.content+"\n-----\n"
+                result += response.choices[0].message.content+"\n\n-----\n\n"
                 # print(f"result appended: {result}")
             except Exception as e:
                 print("An unexpected error occurred:", e)
