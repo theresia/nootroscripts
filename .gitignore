@@ -5,6 +5,7 @@ output/**/*.*
 output/*.*
 !output/.gitkeep
 !output/mds/.gitkeep
+!output/audio_cache/.gitkeep
 !output/embeddings/.gitkeep
 
 # Byte-compiled / optimized / DLL files

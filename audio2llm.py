@@ -75,9 +75,10 @@ Usage:
 
 '''
 
-import os, sys, re, argparse, json, glob, datetime
+import os, sys, re, argparse, json, glob, datetime, requests
 import torch, openai, whisper, tqdm, inflect
 
+from urllib.parse import urlparse
 from pathlib import Path
 from whisper.utils import get_writer 
 from nltk import sent_tokenize # had to run nltk.download('punkt') first
@@ -85,6 +86,11 @@ from nltk import sent_tokenize # had to run nltk.download('punkt') first
 from prompts import user_prompts # we define the generic prompt for each mode here
 
 current_dir = os.path.dirname(os.path.abspath(__name__))
+
+def is_local_file(url):
+    parsed_url = urlparse(url)
+    # If there is no scheme or it is a 'file' scheme, it is a local file
+    return not parsed_url.scheme or parsed_url.scheme == 'file'
 
 def convert_to_ordinal(number):
     p = inflect.engine()
@@ -467,6 +473,29 @@ def llm_process(transcript, transcript_file, mode='QnAs', model='gpt-4o', contex
         text_file.write(result)
         print("Saved result to "+output_filepath+'/'+output_filename)
 
+def download_mp3(url, download_dir):
+    response = requests.get(url, stream=True)
+    if response.status_code == 200:
+        file_name = os.path.join(download_dir, url.split("/")[-1]).split("?")[0]
+        if(is_local_file(file_name) and os.path.exists(file_name)):
+            return file_name
+        total_size = int(response.headers.get('content-length', 0))
+        with open(file_name, "wb") as file, tqdm.tqdm(
+                desc=file_name,
+                total=total_size,
+                unit='B',
+                unit_scale=True,
+                unit_divisor=1024,
+        ) as bar:
+            for data in response.iter_content(chunk_size=1024):
+                file.write(data)
+                bar.update(len(data))
+        print(f"Downloaded: {url} to {file_name}")
+        return file_name
+    else:
+        print(f"Failed to download: {url}")
+        return None
+
 if __name__ == '__main__':
     text = ''
     output_filename_path = ''
@@ -547,13 +576,22 @@ if __name__ == '__main__':
                         f.write(text)
         print("transcript acquired of length: "+str(len(text)))
         
-    elif(args.af and os.path.exists(args.af)):
-        output_filename_path = args.af
-        # output_filename = Path(output_filename_path).name
-        output_filepath = Path(output_filename_path).parent
-        text = transcribe(args.af, model_type=args.tmodel, output_dir=output_filepath, language=args.lang)
+    elif(args.af and is_local_file(args.af) and os.path.exists(args.af)): # is a local file that exists
+        audio_file = args.af
+    elif(args.af and not is_local_file(args.af)): # is a url
+        audio_file_download_dir = "output/audio_cache/" # where to store audio streams downloaded from HTTP/S
+        os.makedirs(audio_file_download_dir, exist_ok=True)
+        audio_file = download_mp3(args.af, audio_file_download_dir)
     else:
         print("need to specify either one of tf or af")
+
+    if(audio_file): # now, transcribe the local audio file
+        output_filename_path = audio_file
+        # output_filename = Path(output_filename_path).name
+        output_filepath = Path(output_filename_path).parent
+        text = transcribe(audio_file, model_type=args.tmodel, output_dir=output_filepath, language=args.lang)
+    else:
+        print(f"cannot process {args.af}")
     
     if(args.mode != 'transcription' and text and output_filename_path): # if not transcription, then pass this to GPT
         llm_process(
