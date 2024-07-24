@@ -72,6 +72,7 @@ Usage
 
 import os
 import hashlib
+import datetime
 import tiktoken
 import argparse
 import whisper
@@ -573,6 +574,8 @@ if __name__ == '__main__':
     parser.add_argument('--dla', action='store_true', help="download and transcribe the audio, don't use youtube auto caption")
     parser.add_argument('--lang', type=str, default='en', help='language code of the video')
     
+    time_begin = datetime.datetime.now() # in audio2llm.py I put this inside the llm_process method because it saves the text file in the method, unlike here
+    
     args = parser.parse_args()
     
     force_download_audio = False
@@ -610,6 +613,12 @@ if __name__ == '__main__':
             mode = f"prompt-{hashlib.md5(args.prompt.encode('utf-8')).hexdigest()}"
         
         llm_result = llm_process(transcript, llm_mode=args.mode, chapters=chapters, use_chapters=with_chapters, prompt=args.prompt, video_title=video_title, llm_personality=args.lmtone)
+
+        time_end = datetime.datetime.now()
+    
+        print(f"time taken: {str(time_end - time_begin)}")
+        llm_result += f"\n\n-----\n\ntime taken: {str(time_end - time_begin)}"
+
         print(f'LLM result for the Video:\n{llm_result}')
         llm_result_filename = f"output/{video_id}-{mode}-{args.lmodel}.md"
         with open(llm_result_filename, "w") as f:

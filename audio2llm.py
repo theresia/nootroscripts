@@ -280,6 +280,8 @@ def chunk_text(transcript, model_name, chunking_method='word', n_div=1):
     return snippet
 
 def llm_process(transcript, transcript_file, mode='QnAs', model='gpt-4o', context_filename='', prompt='', output_filepath='', specific_snippet=0, chunking_method='sentence', be_thorough = False):
+    time_begin = datetime.datetime.now()
+
     input_fileext = Path(transcript_file).suffix # to check if it's md (likely an article) or txt (likely a transcript)
 
     if mode in['summary', 'kp']:
@@ -418,8 +420,6 @@ def llm_process(transcript, transcript_file, mode='QnAs', model='gpt-4o', contex
 
     ## start sending the values to the LLM
     
-    time_begin = datetime.datetime.now()
-    
     for i in range(0, len(snippet), 1):
         print("Processing transcribed snippet {} of {} with model {}".format(i+1,len(snippet), model))
         if('gpt' not in model and use_api is False):
@@ -529,6 +529,8 @@ if __name__ == '__main__':
         specific_snippet = args.specific_snippet
     else:
         specific_snippet = 0
+    
+    audio_file = ''
 
     if(args.tf): # process the transcript file over audio file
         if(os.path.isfile(args.tf)):
@@ -583,7 +585,7 @@ if __name__ == '__main__':
         os.makedirs(audio_file_download_dir, exist_ok=True)
         audio_file = download_mp3(args.af, audio_file_download_dir)
     else:
-        print("need to specify either one of tf or af")
+        print("need to specify either one of tf {args.tf} or af {args.af}")
 
     if(audio_file): # now, transcribe the local audio file
         output_filename_path = audio_file
@@ -591,7 +593,7 @@ if __name__ == '__main__':
         output_filepath = Path(output_filename_path).parent
         text = transcribe(audio_file, model_type=args.tmodel, output_dir=output_filepath, language=args.lang)
     else:
-        print(f"cannot process {args.af}")
+        print(f"cannot process af {args.af}")
     
     if(args.mode != 'transcription' and text and output_filename_path): # if not transcription, then pass this to GPT
         llm_process(
