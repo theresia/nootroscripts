@@ -283,6 +283,7 @@ def llm_process(transcript, transcript_file, mode='QnAs', model='gpt-4o', contex
     time_begin = datetime.datetime.now()
 
     input_fileext = Path(transcript_file).suffix # to check if it's md (likely an article) or txt (likely a transcript)
+    input_filename = Path(transcript_file).name
 
     if mode in['summary', 'kp']:
         mode = 'summary'
@@ -321,7 +322,7 @@ def llm_process(transcript, transcript_file, mode='QnAs', model='gpt-4o', contex
             "1. the distilled version of the deeper underlying theme of all the ideas." \
             "2. what intersections of topics are being dicussed"
     
-    result = ""
+    result = f"article_slug: {input_filename}\n\n"
     # previous = ""
     
     if('[concatenated text]' in transcript):
