@@ -37,5 +37,7 @@ user_prompts = {
           "Speak in first person narrative. Use informal, conversational, and witty style. Write for the ears rather than for the eyes. " \
           "Use active voice. Avoid passive voice as much as possible.",
     'cbb': "Here's a news article. please turn the title of the article into a question and find the answer to the question in the text provided",
-    'density': "Based on the density of idea, conciseness, and amount of fillers in the text, please rate it on a scale of 1 to 5 (5 being the least amount of summarisation needed). Then summarise accordingly. Adjust the granularity based on your assessment. If you think it is sparse then be less granular and meticulous. If you think it is dense then be more granular and meticulous. Use bulletpoints to highlight the arguments, concepts, and recommendations if any"
+    'density': "Based on the density of idea, conciseness, and amount of fillers in the text, please rate it on a scale of 1 to 5 (5 being the least amount of summarisation needed). Then summarise accordingly. Adjust the granularity based on your assessment. If you think it is sparse then be less granular and meticulous. If you think it is dense then be more granular and meticulous. Use bulletpoints to highlight the arguments, concepts, and recommendations if any",
+    'distinctions': "give me a list of distinctions made where different nuanced term for a similar idea are contrasted",
+    'misconceptions': "a list of misconceptions argued against by the speakers",
 }
