@@ -1,4 +1,12 @@
 /*
+// the HTML:
+
+<div class="html5-video-container" data-layer="0"><video tabindex="-1" class="video-stream html5-main-video" webkit-playsinline="" playsinline="" controlslist="nodownload" src="https://chrt.fm/track/GB4AE5/www.buzzsprout.com/1783651/15708404-bjorn-lomborg-a-data-driven-approach-to-global-issues.mp3"></video></div>
+
+----
+
+// the brief / tutorial
+
 https://chatgpt.com/c/66e28e48-9520-800e-b4a5-8cfffc329b29
 
 ### How the Components Work Together:
@@ -8,7 +16,6 @@ https://chatgpt.com/c/66e28e48-9520-800e-b4a5-8cfffc329b29
 2. **Background Script (`background.js`)**: Listens for the message from the content script, stores the video URL in `chrome.storage.local`.
 
 3. **Popup Script (`popup.js`)**: Retrieves the stored video URLs from `chrome.storage.local` and displays them in the popup.
-
 */
 
 console.log('Content script running...');
