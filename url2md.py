@@ -111,8 +111,8 @@ if __name__ == '__main__':
         }
         # print(f"retrieving url: {url} with headers: {headers}")
         
-        if('medium.com' in url):
-            # with Zyte API
+        if('medium.com' in url or 'x.com' in url or 'twitter.com' in url):
+            # use Zyte API
             response = session.post("https://api.zyte.com/v1/extract",
                 auth=(zyte_api_key, ""),
                 json={
