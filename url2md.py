@@ -34,6 +34,9 @@ from time import sleep
 from pathlib import Path
 from urllib3.util.url import parse_url
 from urllib.parse import parse_qs
+from base64 import b64decode
+
+zyte_api_key = os.getenv("ZYTE_API_KEY")
 
 if __name__ == '__main__':
     session = requests_html.HTMLSession()
@@ -106,30 +109,31 @@ if __name__ == '__main__':
         headers = {
             'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
         }
-        # this still doesn't work tho
-        if 'twitter.com' in netloc:
-            headers = {
-              'authority': 'twitter.com',
-              'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-              'accept-language': 'en-US,en;q=0.9',
-              'dnt': '1',
-              'sec-ch-ua': "\"Not_A Brand\";v=\"8\", \"Chromium\";v=\"120\", \"Google Chrome\";v=\"120\"",
-              'sec-ch-ua-mobile': '?0',
-              'sec-ch-ua-platform': "macOS",
-              'sec-fetch-dest': 'document',
-              'sec-fetch-mode': 'navigate',
-              'sec-fetch-site': 'none',
-              'sec-fetch-user': '?1',
-              'upgrade-insecure-requests': '1',
-              'user-agent': requests_html.user_agent(),
-            }
         # print(f"retrieving url: {url} with headers: {headers}")
+        
+        if('medium.com' in url):
+            # with Zyte API
+            response = session.post("https://api.zyte.com/v1/extract",
+                auth=(zyte_api_key, ""),
+                json={
+                    "url": url,
+                    "browserHtml": True,
+                    "screenshot": True,
+                },
+            )
+            browser_html: str = response.json()["browserHtml"]
+            markdown_content = "Downloaded from: "+url+"\n\n---\n\n"
+            markdown_content += md_converter.handle(browser_html)
 
-        response = session.get(url, headers=headers)
-        response.html.render()
-
-        markdown_content = "Downloaded from: "+url+"\n\n---\n\n"
-        markdown_content += md_converter.handle(response.html.html)
+            screenshot: bytes = b64decode(response.json()["screenshot"])
+            with open(output_dir+'/'+slug+'.jpg', "wb") as fp:
+                fp.write(screenshot)
+        else:
+            # without Zyte API
+            response = session.get(url, headers=headers)
+            response.html.render()
+            markdown_content = "Downloaded from: "+url+"\n\n---\n\n"
+            markdown_content += md_converter.handle(response.html.html)
 
         with open(output_dir+'/'+slug+'.md', 'w', encoding='utf-8') as f:
             f.write(markdown_content)

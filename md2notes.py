@@ -454,6 +454,7 @@ if __name__ == '__main__':
 
 '''
 TODO:
+00. use prompts.py instead of hard coding the prompts here. just like `system_content = user_prompts[mode]` like I've done in audio2llm.py and youtube2llm.py
 0. merge audio2llm.py and md2notes.py
     situation: md2notes.py is 85% similar to audio2llm.py but this one is used for articles (usually retrieved by url2md.py) more while that one I use for podcasts
     differences between these two scripts:
