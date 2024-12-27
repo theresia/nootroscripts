@@ -256,16 +256,24 @@ def chunk_text(transcript, model_name, chunking_method='word', n_div=1):
         if(model_name.endswith('-16k') or model_name.endswith('-1106')): # 16385
             n = int(5000/n_div) # sweet spot for 16385? but lose granularity?
         elif(model_name == 'gpt-4o' or model_name == 'gpt-4-turbo'): # 128k
-            n = int(determine_chunk_size(len(split_transcript))/n_div)
+            # n = int(determine_chunk_size(len(split_transcript))/n_div)
             n = 4000
             # n = int(7000/n_div)
                 # is 40k a good value for 128k context window size?
                 # 20k is better than 40k. more granular
                 # 15k is the best for the Perell - Shaan master storytelling episode. because word count of transcript is 24077?
                 # but 10k is the best for the Ken Liu episode on thegradient? because word count of transcript is 19844?
+        elif (model_name == 'qwen2'):
+            n = 2000 # idk, perhaps this size is fine? compared to 4k for gpt-4o
         elif(model_name == 'gpt-4'): # 8192
             # n = int(2500/n_div)
             n = int(determine_chunk_size(len(split_transcript))/n_div)
+        elif('llama32v-128k' == model_name): # this one sucks. idk why because the /show info is the same, but perhaps via API it's actually taking the num_ctx seriously
+            n = 10000
+        elif('llama3.2-vision' == model_name): # inconsistent quality. haven't tried different chunk sizes
+            n = 10000
+        elif('phi3:14b' == model_name): # quite bad for summarization. haven't tried different chunk sizes
+            n = 10000
         print(f"n used: {n}")
         # 1300 used to work fine for turbo (or any other models that supports 4096 tokens of context window)
         #   but when I summarised some HN threads, it had some hiccups (context limit hit) (can perhaps use the 16k for HN threads?)
@@ -436,7 +444,8 @@ def llm_process(transcript, transcript_file, mode='QnAs', model='gpt-4o', contex
                             "content": "\"" + snippet[i] + "\"\n Do not include anything that is not in the text."
                             # "content": "\"" + snippet[i] + "\"\n Do not include anything that is not in the text. For additional context here is the previous written message: \n " + previous
                         }
-                    ]
+                    ],
+                    # num_ctx = 131072 # ok doesn't work, have to do it like this https://github.com/ollama/ollama/issues/5965#issuecomment-2252354726 (H/T https://github.com/ollama/ollama/issues/7806#issuecomment-2495435519)
                 )
                 # previous = gpt_response['message']['content']
                 # result += gpt_response.choices[0].message.content + "\n\n-------\n\n(based on the snippet: "+ snippet[i]+")\n\n-------\n\n"

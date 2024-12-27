@@ -86,6 +86,15 @@ from yt_dlp import YoutubeDL, DownloadError # I only use YoutubeDL to retrieve t
 # from openai.embeddings_utils import cosine_similarity, get_embedding # not used yet,
 #       see https://platform.openai.com/docs/guides/embeddings/use-cases > text search using embeddings
 #       and https://cookbook.openai.com/examples/recommendation_using_embeddings
+# for some new methods introduced in https://github.com/ALucek/chunking-strategies/blob/main/chunking.ipynb
+from chunking_evaluation.chunking import (
+    ClusterSemanticChunker,
+    LLMSemanticChunker,
+    FixedTokenChunker,
+    RecursiveTokenChunker,
+    KamradtModifiedChunker
+)
+from chunking_evaluation.utils import openai_token_count
 from prompts import system_prompts, user_prompts
 
 YOUTUBE_VIDEO_URL = "https://www.youtube.com/watch?v={}"
@@ -236,6 +245,10 @@ def process_youtube_video(url, video_id, language="en", force_download_audio=Fal
         # download the mp4 so Whisper can transcribe them
         from pytube import YouTube
         print(url)
+        # trying to fix age restriction-related error
+        # from pytube.innertube import _default_clients
+        # _default_clients["ANDROID_MUSIC"] = _default_clients["WEB"]
+        # youtube_video = YouTube(url, use_oauth=True, allow_oauth_cache=False)
         youtube_video = YouTube(url)
         video_id = youtube_video.vid_info.get('videoDetails').get('videoId')
         if(True): # use pytube
@@ -328,9 +341,41 @@ def llm_process(transcript, llm_mode, chapters=[], use_chapters=True, prompt='',
         # n = 10000 # maximum context length is 16385 for gpt-3.5-turbo-16k, and 4097 for gpt-3.5-turbo
         n = 5300 # the response was stifled when it was 10k before
     print(f"n used: {n}")
+    
+    # start chunking
+    
+    '''
+    # v0: my original version
     st = transcript.split()
     snippet= [' '.join(st[i:i+n]) for i in range(0,len(st),n)]
-        
+    print(f"snippets generated (old): {len(snippet)}")
+    
+    # trying two new methods, based on https://github.com/ALucek/chunking-strategies/blob/main/chunking.ipynb
+    
+    # v1:
+    from chromadb.utils import embedding_functions
+    embedding_function = embedding_functions.OpenAIEmbeddingFunction(api_key=os.environ["OPENAI_KEY"], model_name="text-embedding-3-large")
+    cluster_chunker = ClusterSemanticChunker(
+        embedding_function=embedding_function, 
+        max_chunk_size=10000, # if use `n` 1300, will produce 7 chunks (more than 2 the original and recursive one). if set to higher (5k), generates 5 chunks. idk if I set 20k...? still generates 5. interesting. the original video has 8-9 segments btw
+        length_function=openai_token_count
+    )
+    snippet = cluster_chunker.split_text(transcript)
+    print(f"snippets generated (cluster_chunker): {len(snippet)}")
+    '''
+    
+    # v2:
+    recursive_token_chunker = RecursiveTokenChunker(
+        chunk_size=n,
+        chunk_overlap=0,
+        length_function=openai_token_count,
+        separators=["\n\n", "\n", ".", "?", "!", " ", ""] # According to Research at https://research.trychroma.com/evaluating-chunking
+    )
+    snippet = recursive_token_chunker.split_text(transcript)
+    print(f"snippets generated (recursive_token_chunker): {len(snippet)}")
+    
+    # end chunking
+    
     ## start sending the values to the LLM
     
     for i in range(0, len(snippet), 1):
@@ -417,62 +462,6 @@ def create_embedding(transcript, embedding_filename):
 
     df = pd.DataFrame({"text": transcripts, "embedding": embeddings})
     df.to_csv(SAVE_PATH, index=False, mode="w")
-
-def create_embedding_ollama(transcript, embedding_filename):
-    # DOESN'T WORK yet. retrieval is so off, irrelevant chunks are returned
-    # scratchpad: 20240226-langchain_text_splitter_n_ollama_embedding.py
-    '''
-    want to adapt to use ollama local (with everythinglm or mistral?)
-        https://python.langchain.com/docs/integrations/text_embedding/ollama
-
-    >>> embeddings = OllamaEmbeddings(model="everythinglm")
-    >>> doc_result = embeddings.embed_documents([text])
-    >>> len(doc_result)
-    1
-    >>> len(doc_result[0])
-    5120
-    >>> doc_result[0][:5]
-    [-0.4859403967857361, 0.8739838004112244, 0.7551742196083069, -0.16546519100666046, 1.2470595836639404]
-    >>> query_result = embeddings.embed_query("some query")
-
-    >>> embeddings_mistral = OllamaEmbeddings(model="mistral")
-    >>> doc_result_mistral = embeddings_mistral.embed_documents([text])
-    >>> len(doc_result_mistral[0])
-    4096
-    >>> query_result_mistral = embeddings_mistral.embed_query("gw kemana aja selama bulan ini")
-    '''
-    from langchain_community.embeddings import OllamaEmbeddings
-    from langchain_community.vectorstores import FAISS # testing
-    from langchain.text_splitter import NLTKTextSplitter, RecursiveCharacterTextSplitter
-
-    text = transcript
-    embeddings = OllamaEmbeddings(model="mistral")
-    # docs = embeddings.embed_documents([text])
-
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size = 2500, chunk_overlap = 100)
-    # docs = text_splitter.split_text(text)
-    docs = text_splitter.create_documents([text])
-    print(f"created {len(docs)} chunks")
-    for i, doc in enumerate(docs):
-        print(i, len(doc.page_content))
-    
-    db = FAISS.from_documents(docs, embeddings) # testing
-    db.save_local('output/embeddings/'+transcript_id.replace('-transcript.txt', ''))
-    '''
-    # the searching part
-    db = FAISS.load_local(transcript_id.replace('-transcript.txt', ''), embeddings)
-
-    query = "keeper test" # what is being discussed about keeper test (the episode from lenny - netflix CTO elizabeth stone)
-
-    # result = db.similarity_search(query)
-    result = db.similarity_search_with_score(query)
-    print(result)
-
-    ## kalo pake embedding vector, bukan string
-    embedding_vector = embeddings.embed_query(query)
-    docs_and_scores = db.similarity_search_by_vector(embedding_vector)
-    '''
-    return
 
 def num_tokens(text: str, model: str = GPT_MODEL) -> int:
     """Return the number of tokens in a string."""
@@ -566,7 +555,7 @@ if __name__ == '__main__':
     parser.add_argument('--ef', type=str, help='embedding filename to use')
     # only QnAs mode is implemented at the moment. want to merge with the llm_process method in audio2llm.py
     parser.add_argument('--tmodel', type=str, default='base', help='the Whisper model to use for transcription (tiny/base/small/medium/large. default: base)')
-    parser.add_argument('--mode', type=str, default='QnAs', help='QnAs, note, summary/kp, tag, topix, thread, tp, cbb, definition, translation')
+    parser.add_argument('--mode', type=str, default='QnAs', help='QnAs, note, summary/kp, tag, topix, thread, tp, cbb, definition, distinctions, misconceptions, ada, translation')
     parser.add_argument('--lmtone', type=str, default='default', help="customise LLM's tone. doubtful_stylistic_british is one you can use")
     parser.add_argument('--lmodel', type=str, default='gpt-4o', help='the GPT model to use for summarization (default: gpt-4o)')
     parser.add_argument('--prompt', type=str, help='prompt to use, but chapters will be concatenated as well')
@@ -623,7 +612,7 @@ if __name__ == '__main__':
         llm_result_filename = f"output/{video_id}-{mode}-{args.lmodel}.md"
         with open(llm_result_filename, "w") as f:
             f.write(llm_result)
-    elif args.action == 'embed': # not sdtrong enough, TODO to refactor
+    elif args.action == 'embed': # not strong enough, TODO to refactor
         if args.vid:
             transcript_id = args.vid # need this to construct the below. TODO: refactor so the file naming is more structured and simple
             transcript_filename = 'output/'+transcript_id+'-transcript.txt'
@@ -636,9 +625,9 @@ if __name__ == '__main__':
         # print(f'Transcript acquired: \n{transcript}')
         if('gpt' in GPT_MODEL and 'text-embedding' in EMBEDDING_MODEL):
             create_embedding(transcript, transcript_id)
-        else:
+        elif('nomic' in EMBEDDING_MODEL):
             # still WiP!
-            create_embedding_ollama(transcript, transcript_id)
+            # create_embedding_ollama(transcript, transcript_id)
     elif args.action == 'ask':
         question = "what questions can I ask about what's discussed in the video so I understand the main argument and points that the speaker is making? and for each question please answer each and elaborate them in detail in the same response"
         '''
@@ -712,7 +701,7 @@ TODO
     need to check if it's the prompt, the chunking strategy, the context window, or what. seems like it's a combination all of them sih.
     OK refactored the prompts and modes out of audio2llm.py to a separate file (prompts.py) and allow youtube2llm.py to use them.
     chunking method and size is already the same between these scripts
-12. refactor the output directory # can't remember what this is about, is it just adding output_dir to the args? or to not hardcode some of the paths here?
+12. refactor the output directory # can't remember what this is about, is it just adding output_dir to the args? or to not hardcode some of the "/output"... paths here?
 13. allow running an `ask` mode on a video without having to explicitly call `analyse` and then `embed` beforehand
     i.e.:
         ./youtube2llm.py analyse --vid=zt6i6vVgiO4 --nc --lmodel mistral
@@ -720,4 +709,10 @@ TODO
         ./youtube2llm.py ask --ef=output/embeddings/zt6i6vVgiO4-transcript-transcript_embedding.csv --q "what are the three depression subtypes and the way depression manifests in Earth, Wind, or Fire types?"
     became
         ./youtube2llm.py ask --vid=zt6i6vVgiO4 --nc --lmodel mistral --q "what are the three depression subtypes and the way depression manifests in Earth, Wind, or Fire types?"
+
+
+14. when trying to use o1-preview, got:
+An unexpected error occurred: Error code: 400 - {'error': {'message': "Your organization must qualify for at least usage tier 5 to access 'o1-preview'. See https://platform.openai.com/docs/guides/rate-limits/usage-tiers for more details on usage tiers.", 'type': 'invalid_request_error', 'param': 'model', 'code': 'below_usage_tier'}}
+// lol, https://platform.openai.com/docs/guides/rate-limits/usage-tiers > "Tier 5	$1,000 paid and 30+ days since first successful payment"
+// and https://platform.openai.com/settings/organization/limits shows I'm currently tier 2. haha
 '''
