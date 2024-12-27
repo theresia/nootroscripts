@@ -628,6 +628,7 @@ if __name__ == '__main__':
         elif('nomic' in EMBEDDING_MODEL):
             # still WiP!
             # create_embedding_ollama(transcript, transcript_id)
+            pass
     elif args.action == 'ask':
         question = "what questions can I ask about what's discussed in the video so I understand the main argument and points that the speaker is making? and for each question please answer each and elaborate them in detail in the same response"
         '''
