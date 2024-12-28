@@ -77,6 +77,7 @@ import tiktoken
 import argparse
 import whisper
 import openai
+import ollama
 import ast # for converting embeddings saved as strings back to arrays
 import pandas as pd # for storing text and embeddings data
 
@@ -108,6 +109,8 @@ GPT_MODEL = 'gpt-4o'
 EMBEDDING_MODEL = "text-embedding-ada-002" # 1536 output dimension, "Most capable 2nd generation embedding model, replacing 16 first generation models"
 EMBEDDING_MODEL = "text-embedding-3-large" # 3072 output dimension, "Most capable embedding model for both english and non-english tasks"
 EMBEDDING_MODEL = "text-embedding-3-small" # 1536 output dimension, "Increased performance over 2nd generation ada embedding model"
+EMBEDDING_MODEL = "nomic-embed-text"
+EMBEDDING_MODEL = "mxbai-embed-large"
 BATCH_SIZE = 1000
 # as per https://github.com/openai/openai-cookbook/blob/3f8d3f34054526173c0c9cd110d21d90fe993c3f/examples/Get_embeddings_from_dataset.ipynb or https://cookbook.openai.com/examples/get_embeddings_from_dataset
 embedding_encoding = "cl100k_base"  # this the encoding for text-embedding-ada-002
@@ -123,23 +126,10 @@ encoding = tiktoken.get_encoding(embedding_encoding)
 ##   - if summarize mode, then GPT_MODEL can be overridden with ollama's 'mistral' for example
 ##   - if embed or ask mode, then GPT_MODEL stays hardcoded as 'gpt-*'
 
+client = None
 use_api = False # set to False to use ollama library or set to True to use ollama API
-
-# I don't merge with the branching below (to use OpenAI or local ollama (API/library)) because the logic became
+# I don't merge with the branching under main (to use OpenAI or local ollama (API/library)) because the logic became
 #   a bit complicated. and I'm just benchmarking the difference between the two methods for ollama anyway
-if('gpt' in GPT_MODEL):
-    openai.api_key = os.getenv("OPENAI_KEY")
-    client = openai.OpenAI(api_key=openai.api_key)
-else:
-    # use ollama. perhaps add support for (simonw's) llm some time. or huggingface's (via sentence_transformer?)
-    client = openai.OpenAI(
-        base_url = 'http://localhost:11434/v1',
-        api_key='ollama', # required, but unused
-    )
-
-## begin WiP: prep the LLM for embedding. want to implement ollama-based embedding. see create_embedding_ollama
-## status: doesn't work yet, ollama mistral doesn't support embedding. I think I've got it working with bge in one of the llama index scripts tho
-## end WiP
 
 def get_captions(video_id, language="en"):
     caption = ''
@@ -381,10 +371,11 @@ def llm_process(transcript, llm_mode, chapters=[], use_chapters=True, prompt='',
     for i in range(0, len(snippet), 1):
         print("Processing transcribed snippet {} of {}".format(i+1,len(snippet)))
         if('gpt' not in GPT_MODEL and use_api is False):
-            import ollama
             # result += "use ollama library\n----\n"
             try:
-                gpt_response = ollama.chat(
+                # to try this, https://github.com/ollama/ollama/issues/2929#issuecomment-2327457681
+                options = ollama.Options(temperature=0.0, top_k=30, top_p=0.8, num_thread=8)
+                gpt_response = ollama.chat( # err, but I'm still using this endpoint? not the OpenAI's "client.chat.completions.create..." way
                     model=GPT_MODEL,
                     messages=[
                         {"role": "system", "content": system_prompt},
@@ -393,7 +384,7 @@ def llm_process(transcript, llm_mode, chapters=[], use_chapters=True, prompt='',
                             "content": user_prompt + "\n\n\"" + "Video Title: " + video_title + "\n\n" + snippet[i] + "\"\n Do not include anything that is not in the transcript."
                             # "content": "\"" + snippet[i] + "\"\n Do not include anything that is not in the transcript. For additional context here is the previous written message: \n " + previous
                         }
-                    ]
+                    ], options=options
                 )
                 # previous = gpt_response['message']['content']
                 # result += gpt_response.choices[0].message.content + "\n\n-------\n\n(based on the snippet: "+ snippet[i]+")\n\n-------\n\n"
@@ -465,7 +456,11 @@ def create_embedding(transcript, embedding_filename):
 
 def num_tokens(text: str, model: str = GPT_MODEL) -> int:
     """Return the number of tokens in a string."""
-    encoding = tiktoken.encoding_for_model(model)
+    try:
+        encoding = tiktoken.encoding_for_model(model)
+    except KeyError:
+        # Fallback for unsupported models
+        encoding = tiktoken.get_encoding("cl100k_base")
     return len(encoding.encode(text))
 
 def strings_ranked_by_relatedness(
@@ -475,11 +470,9 @@ def strings_ranked_by_relatedness(
     top_n: int = 100
 ) -> tuple[list[str], list[float]]:
     """Returns a list of strings and relatednesses, sorted from most related to least."""
-    query_embedding_response = client.embeddings.create(
-        model=EMBEDDING_MODEL,
-        input=query,
-    )
+    query_embedding_response = client.embeddings.create(model=EMBEDDING_MODEL, input=query, )
     query_embedding = query_embedding_response.data[0].embedding
+    
     strings_and_relatednesses = [
         (row["text"], relatedness_fn(query_embedding, row["embedding"]))
         for i, row in df.iterrows()
@@ -490,6 +483,41 @@ def strings_ranked_by_relatedness(
     strings, relatednesses = zip(*strings_and_relatednesses)
     return strings[:top_n], relatednesses[:top_n]
 
+def strings_ranked_by_relatedness_ollama(
+    query: str,
+    df: pd.DataFrame,
+    relatedness_fn=lambda x, y: 1 - spatial.distance.cosine(x, y),
+    top_n: int = 100
+) -> tuple[list[str], list[float]]:
+    """
+    Returns a list of strings and relatednesses, sorted from most related to least.
+    Still need a separate method because there's still yet OpenAI-compatible API for ollama embedding (right?)
+    """
+    response = ollama.embeddings(model=EMBEDDING_MODEL, prompt=query)
+    query_embedding = response.get('embedding', [])
+
+    if not query_embedding:
+        print("Failed to generate embedding for the query.")
+        return
+
+    similarities = [
+        (row['text'], relatedness_fn(query_embedding, row['embedding']))
+        for _, row in df.iterrows()
+    ]
+
+    # Sort by similarity
+    similarities.sort(key=lambda x: x[1], reverse=True)
+    strings, relatednesses = zip(*similarities)
+    return strings[:top_n], relatednesses[:top_n]
+    '''
+    top_matches = similarities[:top_n]
+
+    # Display results
+    print("Top matches:")
+    for text, similarity in top_matches:
+        print(f"Similarity: {similarity:.4f}\nText: {text}\n")
+    '''
+
 def query_message(
     query: str,
     df: pd.DataFrame,
@@ -497,7 +525,10 @@ def query_message(
     token_budget: int
 ) -> str:
     """Return a message for GPT, with relevant source texts pulled from a dataframe."""
-    strings, relatednesses = strings_ranked_by_relatedness(query, df, top_n=5)
+    if('nomic' in EMBEDDING_MODEL or 'mxbai' in EMBEDDING_MODEL):
+        strings, relatednesses = strings_ranked_by_relatedness_ollama(query, df, top_n=5)
+    else:
+        strings, relatednesses = strings_ranked_by_relatedness(query, df, top_n=5)
     # print(f"checking strings_ranked_by_relatedness for query: {query}")
     # introduction = 'Use the below transcript of a podcast episode to answer the subsequent question. If the answer cannot be found in the text, write "I could not find an answer."'
     introduction = 'Use the below transcript of a podcast episode to answer the subsequent question."'
@@ -516,27 +547,37 @@ def query_message(
 def ask(
     query: str,
     df: pd.DataFrame,
-    model: str = GPT_MODEL,
+    model: str,
     token_budget: int = 4096 - 500,
     print_message: bool = False,
 ) -> str:
-    """Answers a query using GPT and a dataframe of relevant texts and embeddings."""
+    """Answers a query using GPT (or ollama? I am not sure if this handles the ollama switch. but perhaps yes because there's already OpenAI-compatible endpoint for chat in ollama, and I have initiated the `client` accordingly as a global thing') and a dataframe of relevant texts and embeddings."""
+    response_message = ''
     message = query_message(query, df, model=model, token_budget=token_budget)
     messages = [
         {"role": "system", "content": "You answer questions about the podcast episode."},
         {"role": "user", "content": message},
     ]
-    response = client.chat.completions.create(
-        model=model,
-        messages=messages,
-        temperature=0.5
-    )
-    
+
+    if('gpt' not in model and use_api is False):
+        response = ollama.chat(
+            model=model, # whichever ollama model was specified
+            messages=messages,
+            # options=options
+        )
+        response_message = response['message']['content']
+    else:
+        response = client.chat.completions.create(
+            model=model,
+            messages=messages,
+            temperature=0.5
+        )
+        response_message = response.choices[0].message.content
+        
     if print_message:
         print("ask -> user prompt -> content: " + message)
-        print(f"ask's response: {response}")
+        print(f"ask's response: {response_message}")
     
-    response_message = response.choices[0].message.content
     return response_message
 
 def ask_the_embedding(question, embeddings_filename, print_message=False):
@@ -544,7 +585,39 @@ def ask_the_embedding(question, embeddings_filename, print_message=False):
     df = pd.read_csv(embeddings_filename) # read as dataframe
     # convert embeddings from CSV str type back to list type
     df['embedding'] = df['embedding'].apply(ast.literal_eval) # df has two columns: "text" and "embedding"
-    return ask(question, df, print_message=print_message)
+    return ask(question, df, model=GPT_MODEL, print_message=print_message)
+
+def create_embedding_ollama(transcript, embedding_filename):
+    """Creates embeddings using Ollama's mxbai-embed-large or nomic model and saves to a CSV."""
+    SAVE_PATH = "output/embeddings/"+embedding_filename.replace('.txt', '')+"-transcript_embedding.csv"
+
+    embeddings_list = []
+    transcripts = []
+
+    for batch_start in range(0, len(transcript), BATCH_SIZE):
+        batch_end = batch_start + BATCH_SIZE
+        batch = transcript[batch_start:batch_end]
+        transcripts.append(batch)
+
+    print(f"Transcript split into {len(transcripts)} chunks.")
+
+    for batch in transcripts:
+        response = ollama.embeddings(model=EMBEDDING_MODEL, prompt=batch)
+        embedding = response.get('embedding', [])
+        if embedding:
+            embeddings_list.append(embedding)
+
+    # Save embeddings to CSV
+    df = pd.DataFrame({"text": transcripts, "embedding": embeddings_list})
+    df.to_csv(SAVE_PATH, index=False, mode="w")
+    print(f"Embeddings saved to {SAVE_PATH}")
+
+def ask_the_embedding_ollama(question, embeddings_filename, print_message=True):
+    """Query embeddings using cosine similarity."""
+    # Load the embeddings from CSV
+    df = pd.read_csv(embeddings_filename)
+    df['embedding'] = df['embedding'].apply(ast.literal_eval)
+    return ask(question, df, model=GPT_MODEL, print_message=print_message)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='analyse, embed, and ask anything about the content of the youtube video')
@@ -571,9 +644,22 @@ if __name__ == '__main__':
     if(args.dla):
         force_download_audio = True
     
+    if(args.lmodel): # hackish because I haven't made GPT_MODEL local (still global)
+        GPT_MODEL = args.lmodel
+
+    if('gpt' in GPT_MODEL):
+        print(f"base :: using {GPT_MODEL}")
+        openai.api_key = os.getenv("OPENAI_KEY")
+        client = openai.OpenAI(api_key=openai.api_key)
+    else:
+        print(f"base :: using ollama {GPT_MODEL}")
+        # use ollama. perhaps add support for (simonw's) llm some time. or huggingface's (via sentence_transformer?)
+        client = openai.OpenAI(
+            base_url = 'http://localhost:11434/v1',
+            api_key='ollama', # required, but unused
+        )
+
     if args.action == 'analyse':
-        if(args.lmodel): # hackish because I haven't made GPT_MODEL local (still global)
-            GPT_MODEL = args.lmodel
         
         chapters = []
         transcript = ''
@@ -598,7 +684,6 @@ if __name__ == '__main__':
         if(args.prompt):
             llm_result += f"prompt: {args.prompt}\n\n------\n\n"
             print(f"prompt: {args.prompt}")
-            import hashlib
             mode = f"prompt-{hashlib.md5(args.prompt.encode('utf-8')).hexdigest()}"
         
         llm_result = llm_process(transcript, llm_mode=args.mode, chapters=chapters, use_chapters=with_chapters, prompt=args.prompt, video_title=video_title, llm_personality=args.lmtone)
@@ -613,23 +698,28 @@ if __name__ == '__main__':
         with open(llm_result_filename, "w") as f:
             f.write(llm_result)
     elif args.action == 'embed': # not strong enough, TODO to refactor
+        
         if args.vid:
             transcript_id = args.vid # need this to construct the below. TODO: refactor so the file naming is more structured and simple
             transcript_filename = 'output/'+transcript_id+'-transcript.txt'
+        
         if(args.tf and os.path.exists(args.tf)): # override the value of vid if tf was provided
             transcript_filename = args.tf
             transcript_id = os.path.basename(transcript_filename)
+        
         print(f'Creating embedding from transcript: \n{transcript_filename}, transcript_id: {transcript_id}')
+        
         with open(transcript_filename) as f:
             transcript = f.read()
         # print(f'Transcript acquired: \n{transcript}')
-        if('gpt' in GPT_MODEL and 'text-embedding' in EMBEDDING_MODEL):
+        
+        if('text-embedding' in EMBEDDING_MODEL): # uses OpenAI's embedding model
             create_embedding(transcript, transcript_id)
-        elif('nomic' in EMBEDDING_MODEL):
-            # still WiP!
-            # create_embedding_ollama(transcript, transcript_id)
-            pass
+        elif('nomic' in EMBEDDING_MODEL or 'mxbai' in EMBEDDING_MODEL): # uses ollama's local embedding model
+            create_embedding_ollama(transcript, transcript_id)
+
     elif args.action == 'ask':
+        
         question = "what questions can I ask about what's discussed in the video so I understand the main argument and points that the speaker is making? and for each question please answer each and elaborate them in detail in the same response"
         '''
         question = 'what are the three questions that the video provide answer for? and for each question please answer each and elaborate them in detail in the same response'
@@ -641,10 +731,15 @@ if __name__ == '__main__':
         if args.ef and os.path.isfile(args.ef):
             answer = question + "\n======\n"
             # embeddings_filename = "output/embeddings/"+video_id+"-transcript_embedding.csv"
-            answer += ask_the_embedding(question, args.ef)
+            
+            if('nomic' in EMBEDDING_MODEL or 'mxbai' in EMBEDDING_MODEL):
+                answer += ask_the_embedding_ollama(question, args.ef)
+            else:
+                answer += ask_the_embedding(question, args.ef)
+            
             embeddings_filename = args.ef
             print(f'Answer:\n{answer}')
-            import hashlib, re
+            import re
             pattern = r"([^/]+)-transcript-transcript_embedding.csv" # not so robust way of inferring the video_id from the embedding file, which is just gonna be used to save the answer file sih
             match_video_id = re.search(pattern, embeddings_filename.split('/')[-1])
 
