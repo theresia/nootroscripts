@@ -1,0 +1,421 @@
+Last login: Mon Dec 16 06:22:26 on ttys014
+o%                                                                                                                                                        (base) ➜  nootroscripts git:(main) ✗ ollama run qwen2
+>>> /?
+Available Commands:
+  /set            Set session variables
+  /show           Show model information
+  /load <model>   Load a session or model
+  /save <model>   Save your current session
+  /clear          Clear session context
+  /bye            Exit
+  /?, /help       Help for a command
+  /? shortcuts    Help for keyboard shortcuts
+
+Use """ to begin a multi-line message.
+
+>>> /show
+Available Commands:
+  /show info         Show details for this model
+  /show license      Show model license
+  /show modelfile    Show Modelfile for this model
+  /show parameters   Show parameters for this model
+  /show system       Show system message
+  /show template     Show prompt template
+
+>>> /show info
+  Model
+    architecture        qwen2    
+    parameters          7.6B     
+    context length      32768    
+    embedding length    3584     
+    quantization        Q4_0     
+
+  Parameters
+    stop    "<|im_start|>"    
+    stop    "<|im_end|>"      
+
+  System
+    You are a helpful assistant.    
+
+  License
+    Apache License               
+    Version 2.0, January 2004    
+
+>>> bye
+Good^[[Abye! Have a wonderful day, and feel free to return if you have more questions in the future. Stay safe and take care!
+
+>>> 
+(base) ➜  nootroscripts git:(main) ✗ ollama run llama3.2-vision
+>>> /?
+Available Commands:
+  /set            Set session variables
+  /show           Show model information
+  /load <model>   Load a session or model
+  /save <model>   Save your current session
+  /clear          Clear session context
+  /bye            Exit
+  /?, /help       Help for a command
+  /? shortcuts    Help for keyboard shortcuts
+
+Use """ to begin a multi-line message.
+Use /path/to/file to include .jpg or .png images.
+
+>>> /show info
+  Model
+    architecture        mllama    
+    parameters          9.8B      
+    context length      131072    
+    embedding length    4096      
+    quantization        Q4_K_M    
+
+  Projector
+    architecture        mllama     
+    parameters          895.03M    
+    embedding length    1280       
+    dimensions          4096       
+
+  Parameters
+    temperature    0.6    
+    top_p          0.9    
+
+  License
+    LLAMA 3.2 COMMUNITY LICENSE AGREEMENT                 
+    Llama 3.2 Version Release Date: September 25, 2024    
+
+>>> 
+(base) ➜  nootroscripts git:(main) ✗ ollama run llama3.1       
+(base) ➜  nootroscripts git:(main) ✗ ollama list
+NAME                      ID              SIZE      MODIFIED      
+phi3:14b                  80cf2a700d14    7.9 GB    42 hours ago     
+llama3.2-vision:latest    085a1fdae525    7.9 GB    43 hours ago     
+qwen2:latest              dd314f039b9d    4.4 GB    3 days ago       
+mistral:latest            61e88e884507    4.1 GB    10 months ago    
+(base) ➜  nootroscripts git:(main) ✗ ollama run phi3:14b
+>>> /show info
+  Model
+    architecture        phi3      
+    parameters          14.0B     
+    context length      131072    
+    embedding length    5120      
+    quantization        Q4_0      
+
+  Parameters
+    num_thread    10                 
+    stop          "<|end|>"          
+    stop          "<|user|>"         
+    stop          "<|assistant|>"    
+
+  License
+    Microsoft.                              
+    Copyright (c) Microsoft Corporation.    
+
+>>> 
+(base) ➜  nootroscripts git:(main) ✗ ollama show --modelfile qwen2 > Modelfile
+(base) ➜  nootroscripts git:(main) ✗ less Modelfile 
+(base) ➜  nootroscripts git:(main) ✗ vim Modelfile                       
+(base) ➜  nootroscripts git:(main) ✗ mv Modelfile qwen2.Modelfile
+(base) ➜  nootroscripts git:(main) ✗ ollama create -f qwen2.Modelfile qwen2-128k 
+transferring model data 
+using existing layer sha256:43f7a214e5329f672bb05404cfba1913cbb70fdaa1a17497224e1925046b0ed5 
+using existing layer sha256:c156170b718ec29139d3653d40ed1986fd92fb7e0959b5c71f3c48f62e6636f4 
+creating new layer sha256:51caec947494814013ff7a2427b7fa223eb7e4d34f5cd5f11b4201a42cda0cf5 
+using existing layer sha256:75357d685f238b6afd7738be9786fdafde641eb6ca9a3be7471939715a68a4de 
+using existing layer sha256:c156170b718ec29139d3653d40ed1986fd92fb7e0959b5c71f3c48f62e6636f4 
+using existing layer sha256:f02dd72bb2423204352eabc5637b44d79d17f109fdb510a7c51455892aa2d216 
+creating new layer sha256:bcc2fca1f59efec3045189529357ecd5db627f12ae92c557fb0cc273903b0fa6 
+writing manifest 
+success 
+(base) ➜  nootroscripts git:(main) ✗ ollama list
+NAME                      ID              SIZE      MODIFIED       
+qwen2-128k:latest         24ad724c94ae    4.4 GB    12 seconds ago    
+phi3:14b                  80cf2a700d14    7.9 GB    42 hours ago      
+llama3.2-vision:latest    085a1fdae525    7.9 GB    43 hours ago      
+qwen2:latest              dd314f039b9d    4.4 GB    3 days ago        
+mistral:latest            61e88e884507    4.1 GB    10 months ago     
+(base) ➜  nootroscripts git:(main) ✗ ollama run qwen2                           
+>>> /show info
+  Model
+    architecture        qwen2    
+    parameters          7.6B     
+    context length      32768    
+    embedding length    3584     
+    quantization        Q4_0     
+
+  Parameters
+    stop    "<|im_start|>"    
+    stop    "<|im_end|>"      
+
+  System
+    You are a helpful assistant.    
+
+  License
+    Apache License               
+    Version 2.0, January 2004    
+
+>>> 
+(base) ➜  nootroscripts git:(main) ✗ ollama run qwen2-128k
+>>> /show info
+  Model
+    architecture        qwen2    
+    parameters          7.6B     
+    context length      32768    
+    embedding length    3584     
+    quantization        Q4_0     
+
+  Parameters
+    stop    "<|im_start|>"    
+    stop    "<|im_end|>"      
+
+  System
+    You are a helpful assistant.    
+
+  License
+    Apache License               
+    Version 2.0, January 2004    
+
+>>> 
+(base) ➜  nootroscripts git:(main) ✗ ollama show --modelfile llama3.2-vision > llama32v.Modelfile
+(base) ➜  nootroscripts git:(main) ✗ vim llama32v.Modelfile      
+(base) ➜  nootroscripts git:(main) ✗ vim llama32v.Modelfile
+(base) ➜  nootroscripts git:(main) ✗ vim qwen2.Modelfile         
+(base) ➜  nootroscripts git:(main) ✗ vim llama32v.Modelfile
+(base) ➜  nootroscripts git:(main) ✗ ollama create -f llama32v.Modelfile llama32v-128k
+transferring model data 
+using existing layer sha256:11f274007f093fefeec994a5dbbb33d0733a4feb87f7ab66dcd7c1069fef0068 
+using existing layer sha256:ece5e659647a20a5c28ab9eea1c12a1ad430bc0f2a27021d00ad103b3bf5206f 
+using existing layer sha256:0b4284c1f87029e67654c7953afa16279961632cf73dcfe33374c4c2f298fa35 
+creating new layer sha256:c642b75e0e022586665207e8b9f7ed57bdd946d8d631500d567db308194c75e1 
+using existing layer sha256:0b4284c1f87029e67654c7953afa16279961632cf73dcfe33374c4c2f298fa35 
+using existing layer sha256:fefc914e46e6024467471837a48a24251db2c6f3f58395943da7bf9dc6f70fb6 
+creating new layer sha256:c84fdc83494701e97cb0fc68946a73939a65e223e4945767a70c2f531b692514 
+writing manifest 
+success 
+(base) ➜  nootroscripts git:(main) ✗ ollama list
+NAME                      ID              SIZE      MODIFIED      
+llama32v-128k:latest      1154ca064945    7.9 GB    4 seconds ago    
+qwen2-128k:latest         24ad724c94ae    4.4 GB    3 minutes ago    
+phi3:14b                  80cf2a700d14    7.9 GB    42 hours ago     
+llama3.2-vision:latest    085a1fdae525    7.9 GB    43 hours ago     
+qwen2:latest              dd314f039b9d    4.4 GB    3 days ago       
+mistral:latest            61e88e884507    4.1 GB    10 months ago    
+(base) ➜  nootroscripts git:(main) ✗ ollama run llama32v-128k
+>>> /show info
+  Model
+    architecture        mllama    
+    parameters          9.8B      
+    context length      131072    
+    embedding length    4096      
+    quantization        Q4_K_M    
+
+  Projector
+    architecture        mllama     
+    parameters          895.03M    
+    embedding length    1280       
+    dimensions          4096       
+
+  Parameters
+    temperature    0.6    
+    top_p          0.9    
+
+  License
+    LLAMA 3.2 COMMUNITY LICENSE AGREEMENT                 
+    Llama 3.2 Version Release Date: September 25, 2024    
+
+>>> 
+Use Ctrl + d or /bye to exit.
+>>> 
+(base) ➜  nootroscripts git:(main) ✗ ollama run llama3.2-vision
+>>> /show info
+  Model
+    architecture        mllama    
+    parameters          9.8B      
+    context length      131072    
+    embedding length    4096      
+    quantization        Q4_K_M    
+
+  Projector
+    architecture        mllama     
+    parameters          895.03M    
+    embedding length    1280       
+    dimensions          4096       
+
+  Parameters
+    top_p          0.9    
+    temperature    0.6    
+
+  License
+    LLAMA 3.2 COMMUNITY LICENSE AGREEMENT                 
+    Llama 3.2 Version Release Date: September 25, 2024    
+
+>>> :q
+It looks like you're trying to quit our conversation! That's okay, I won't take it personally. Is there anything else I can help with before you go?
+
+>>> 
+(base) ➜  nootroscripts git:(main) ✗ ollama list               
+NAME                      ID              SIZE      MODIFIED      
+llama32v-128k:latest      1154ca064945    7.9 GB    2 minutes ago    
+qwen2-128k:latest         24ad724c94ae    4.4 GB    5 minutes ago    
+phi3:14b                  80cf2a700d14    7.9 GB    42 hours ago     
+llama3.2-vision:latest    085a1fdae525    7.9 GB    43 hours ago     
+qwen2:latest              dd314f039b9d    4.4 GB    3 days ago       
+mistral:latest            61e88e884507    4.1 GB    10 months ago    
+(base) ➜  nootroscripts git:(main) ✗ ollama run qwen2-128k      
+>>> /show info
+  Model
+    architecture        qwen2    
+    parameters          7.6B     
+    context length      32768    
+    embedding length    3584     
+    quantization        Q4_0     
+
+  Parameters
+    stop    "<|im_start|>"    
+    stop    "<|im_end|>"      
+
+  System
+    You are a helpful assistant.    
+
+  License
+    Apache License               
+    Version 2.0, January 2004    
+
+>>> 
+(base) ➜  nootroscripts git:(main) ✗ ollama rm qwen2-128k 
+deleted 'qwen2-128k'
+(base) ➜  nootroscripts git:(main) ✗ ollama list
+NAME                      ID              SIZE      MODIFIED       
+llama32v-128k:latest      1154ca064945    7.9 GB    12 minutes ago    
+phi3:14b                  80cf2a700d14    7.9 GB    42 hours ago      
+llama3.2-vision:latest    085a1fdae525    7.9 GB    43 hours ago      
+qwen2:latest              dd314f039b9d    4.4 GB    3 days ago        
+mistral:latest            61e88e884507    4.1 GB    10 months ago     
+(base) ➜  nootroscripts git:(main) ✗ ollama run llama3.2-vision
+>>> /show info
+  Model
+    architecture        mllama    
+    parameters          9.8B      
+    context length      131072    
+    embedding length    4096      
+    quantization        Q4_K_M    
+
+  Projector
+    architecture        mllama     
+    parameters          895.03M    
+    embedding length    1280       
+    dimensions          4096       
+
+  Parameters
+    temperature    0.6    
+    top_p          0.9    
+
+  License
+    LLAMA 3.2 COMMUNITY LICENSE AGREEMENT                 
+    Llama 3.2 Version Release Date: September 25, 2024    
+
+>>> /show info
+Use Ctrl + d or /bye to exit.
+>>> 
+(base) ➜  nootroscripts git:(main) ✗ ollama ps                 
+NAME                      ID              SIZE     PROCESSOR         UNTIL              
+llama3.2-vision:latest    085a1fdae525    12 GB    7%/93% CPU/GPU    4 minutes from now    
+(base) ➜  nootroscripts git:(main) ✗ ollama ps
+NAME                      ID              SIZE     PROCESSOR         UNTIL              
+llama3.2-vision:latest    085a1fdae525    12 GB    7%/93% CPU/GPU    4 minutes from now    
+(base) ➜  nootroscripts git:(main) ✗ ollama ps
+NAME                      ID              SIZE     PROCESSOR         UNTIL              
+llama3.2-vision:latest    085a1fdae525    12 GB    7%/93% CPU/GPU    3 minutes from now    
+(base) ➜  nootroscripts git:(main) ✗ ollama
+Usage:
+  ollama [flags]
+  ollama [command]
+
+Available Commands:
+  serve       Start ollama
+  create      Create a model from a Modelfile
+  show        Show information for a model
+  run         Run a model
+  stop        Stop a running model
+  pull        Pull a model from a registry
+  push        Push a model to a registry
+  list        List models
+  ps          List running models
+  cp          Copy a model
+  rm          Remove a model
+  help        Help about any command
+
+Flags:
+  -h, --help      help for ollama
+  -v, --version   Show version information
+
+Use "ollama [command] --help" for more information about a command.
+(base) ➜  nootroscripts git:(main) ✗ ollama ps
+NAME                      ID              SIZE     PROCESSOR         UNTIL              
+llama3.2-vision:latest    085a1fdae525    12 GB    7%/93% CPU/GPU    4 minutes from now    
+(base) ➜  nootroscripts git:(main) ✗ ollama rm llama32-128k
+Error: model 'llama32-128k' not found
+(base) ➜  nootroscripts git:(main) ✗ ollama rm llama32v-128k
+deleted 'llama32v-128k'
+(base) ➜  nootroscripts git:(main) ✗ ollama list
+NAME                      ID              SIZE      MODIFIED      
+phi3:14b                  80cf2a700d14    7.9 GB    43 hours ago     
+llama3.2-vision:latest    085a1fdae525    7.9 GB    44 hours ago     
+qwen2:latest              dd314f039b9d    4.4 GB    3 days ago       
+mistral:latest            61e88e884507    4.1 GB    10 months ago    
+(base) ➜  nootroscripts git:(main) ✗ ollama run phi3:14b
+>>> /show info
+  Model
+    architecture        phi3      
+    parameters          14.0B     
+    context length      131072    
+    embedding length    5120      
+    quantization        Q4_0      
+
+  Parameters
+    num_thread    10                 
+    stop          "<|end|>"          
+    stop          "<|user|>"         
+    stop          "<|assistant|>"    
+
+  License
+    Microsoft.                              
+    Copyright (c) Microsoft Corporation.    
+
+>>> pll
+Use Ctrl + d or /bye to exit.
+>>> 
+(base) ➜  nootroscripts git:(main) ✗ ollama ps
+NAME        ID              SIZE     PROCESSOR    UNTIL              
+phi3:14b    80cf2a700d14    11 GB    100% GPU     4 minutes from now    
+(base) ➜  nootroscripts git:(main) ✗ ollama ps
+NAME    ID    SIZE    PROCESSOR    UNTIL 
+(base) ➜  nootroscripts git:(main) ✗ ollama ps
+NAME            ID              SIZE      PROCESSOR    UNTIL              
+qwen2:latest    dd314f039b9d    5.8 GB    100% GPU     4 minutes from now    
+(base) ➜  nootroscripts git:(main) ✗ ollama ps
+NAME            ID              SIZE      PROCESSOR    UNTIL              
+qwen2:latest    dd314f039b9d    5.8 GB    100% GPU     4 minutes from now    
+(base) ➜  nootroscripts git:(main) ✗ ollama ps
+NAME            ID              SIZE      PROCESSOR    UNTIL       
+qwen2:latest    dd314f039b9d    5.8 GB    100% GPU     Stopping...    
+(base) ➜  nootroscripts git:(main) ✗ ollama ps
+NAME        ID              SIZE     PROCESSOR    UNTIL       
+phi3:14b    80cf2a700d14    11 GB    100% GPU     Stopping...    
+(base) ➜  nootroscripts git:(main) ✗ ollama ps
+NAME        ID              SIZE     PROCESSOR    UNTIL       
+phi3:14b    80cf2a700d14    11 GB    100% GPU     Stopping...    
+(base) ➜  nootroscripts git:(main) ✗ ollama ps
+NAME        ID              SIZE     PROCESSOR    UNTIL              
+phi3:14b    80cf2a700d14    11 GB    100% GPU     3 minutes from now    
+(base) ➜  nootroscripts git:(main) ✗ ollama ps
+NAME        ID              SIZE     PROCESSOR    UNTIL              
+phi3:14b    80cf2a700d14    11 GB    100% GPU     3 minutes from now    
+(base) ➜  nootroscripts git:(main) ✗ ollama ps
+NAME        ID              SIZE     PROCESSOR    UNTIL              
+phi3:14b    80cf2a700d14    11 GB    100% GPU     3 minutes from now    
+(base) ➜  nootroscripts git:(main) ✗ ollama ps
+NAME        ID              SIZE     PROCESSOR    UNTIL              
+phi3:14b    80cf2a700d14    11 GB    100% GPU     2 minutes from now    
+(base) ➜  nootroscripts git:(main) ✗ ollama ps
+NAME                      ID              SIZE     PROCESSOR         UNTIL              
+llama3.2-vision:latest    085a1fdae525    12 GB    7%/93% CPU/GPU    4 minutes from now    
+(base) ➜  nootroscripts git:(main) ✗ 
