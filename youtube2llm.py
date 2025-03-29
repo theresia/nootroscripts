@@ -227,7 +227,7 @@ def process_youtube_video(url, video_id, language="en", force_download_audio=Fal
     devices = torch.device("cuda:0" if torch.cuda.is_available() else "cpu") 
     model = whisper.load_model(transcription_model, device=devices)
 
-    youtube_metadata = get_youtube_metadata(video_id, save=True) # returns a dict, optionally saves it into a {video_id}-metadata.json file
+    youtube_metadata = get_youtube_metadata(video_id, save=False) # returns a dict, optionally saves it into a {video_id}-metadata.json file
     chapters = get_chapters(youtube_metadata)
     video_title = youtube_metadata.get('title')
     
@@ -647,12 +647,10 @@ if __name__ == '__main__':
     if(args.lmodel): # hackish because I haven't made GPT_MODEL local (still global)
         GPT_MODEL = args.lmodel
 
-    if('gpt' in GPT_MODEL):
-        print(f"base :: using {GPT_MODEL}")
+    if('gpt' in GPT_MODEL or 'o3' in GPT_MODEL):
         openai.api_key = os.getenv("OPENAI_KEY")
         client = openai.OpenAI(api_key=openai.api_key)
     else:
-        print(f"base :: using ollama {GPT_MODEL}")
         # use ollama. perhaps add support for (simonw's) llm some time. or huggingface's (via sentence_transformer?)
         client = openai.OpenAI(
             base_url = 'http://localhost:11434/v1',
