@@ -426,6 +426,7 @@ def llm_process(transcript, transcript_file, mode='QnAs', model='gpt-4o', contex
             base_url = 'http://localhost:11434/v1',
             api_key='ollama', # required, but unused
         )
+        # huh but wait, I NEVER use the client object anywhere other than when I call the OpenAI chat endpoint. while I'm using ollama.chat for the ollama stuff. so why do I even bother doing this logical switch, haha
 
     ## start sending the values to the LLM
     
@@ -483,10 +484,13 @@ def llm_process(transcript, transcript_file, mode='QnAs', model='gpt-4o', contex
         text_file.write(result)
         print("Saved result to "+output_filepath+'/'+output_filename)
 
-def download_mp3(url, download_dir):
+def download_mp3(url, download_dir, custom_name=None):
     response = requests.get(url, stream=True)
     if response.status_code == 200:
-        file_name = os.path.join(download_dir, url.split("/")[-1]).split("?")[0]
+        tmp_name = url.split("/")[-1]
+        if(custom_name):
+            tmp_name = custom_name
+        file_name = os.path.join(download_dir, tmp_name).split("?")[0]
         if(is_local_file(file_name) and os.path.exists(file_name)):
             return file_name
         total_size = int(response.headers.get('content-length', 0))
@@ -523,6 +527,7 @@ if __name__ == '__main__':
     parser.add_argument('--output_dir', type=str, help='dir to use to save the output files')
     parser.add_argument('--specific_snippet', type=int, help='just process this part of the snippet (usually used together with --prompt, after seeing a summary/note and want to zoom in on specific point in the transcript)')
     parser.add_argument('--cm', type=str, default='word', help='chunking method to use (sentence or words)') # set to be the default, as Whisper starts to generate unpunctuated transcript in the middle of the conversation on April 6th. observed for the Cal Fussman Frank Blake episode, and the WCDHT - why Liz disappeared episode. but the Whisper transcription invoked by utub.py at around the same time, works as expected, punctuated and all. strange
+    parser.add_argument('--cn', type=str, help='custom name to save audio streams as (e.g. 32454.mp3 into some_inteligible_name.mp3)')
     parser.add_argument('--lang', type=str, default='en', help='language code of the audio/video')
     
     args = parser.parse_args()
@@ -592,8 +597,10 @@ if __name__ == '__main__':
         audio_file = args.af
     elif(args.af and not is_local_file(args.af)): # is a url
         audio_file_download_dir = "output/audio_cache/" # where to store audio streams downloaded from HTTP/S
+        if(args.output_dir):
+            audio_file_download_dir = args.output_dir
         os.makedirs(audio_file_download_dir, exist_ok=True)
-        audio_file = download_mp3(args.af, audio_file_download_dir)
+        audio_file = download_mp3(args.af, audio_file_download_dir, custom_name=args.cn)
     else:
         print("need to specify either one of tf {args.tf} or af {args.af}")
 
