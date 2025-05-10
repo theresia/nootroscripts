@@ -70,6 +70,7 @@ Usage
     
 '''
 
+import re
 import os
 import hashlib
 import datetime
@@ -83,6 +84,7 @@ import pandas as pd # for storing text and embeddings data
 
 from pathlib import Path
 from scipy import spatial  # for calculating vector similarities for search
+from urllib.parse import urlparse, parse_qs
 from yt_dlp import YoutubeDL, DownloadError # I only use YoutubeDL to retrieve the chapters and the title of the video
 # from openai.embeddings_utils import cosine_similarity, get_embedding # not used yet,
 #       see https://platform.openai.com/docs/guides/embeddings/use-cases > text search using embeddings
@@ -130,6 +132,17 @@ client = None
 use_api = False # set to False to use ollama library or set to True to use ollama API
 # I don't merge with the branching under main (to use OpenAI or local ollama (API/library)) because the logic became
 #   a bit complicated. and I'm just benchmarking the difference between the two methods for ollama anyway
+
+def extract_video_id(url_or_id):
+    if url_or_id.startswith("http"):
+        # full YouTube URL
+        parsed_url = urlparse(url_or_id)
+        if 'youtube.com' in parsed_url.netloc:
+            query = parse_qs(parsed_url.query)
+            return query.get('v', [None])[0]
+        if 'youtu.be' in parsed_url.netloc:
+            return parsed_url.path.lstrip('/')
+    return url_or_id  # assume it's already a video ID
 
 def get_captions(video_id, language="en"):
     caption = ''
@@ -204,10 +217,10 @@ def get_chapters(info):
         chapters = [c.get('title', '') for c in info.get('chapters', {'title': ''})]
     return chapters
 
-def get_youtube_metadata(url, save=True):
+def get_youtube_metadata(video_id, save=True):
     ydl_opts = {}
     ydl = YoutubeDL(ydl_opts)
-    info = ydl.extract_info(url, download=False)
+    info = ydl.extract_info(video_id, download=False)
     if(save):
         import json
         with(open('output/'+video_id+'-metadata.json', 'w') as f):
@@ -219,6 +232,8 @@ def process_youtube_video(url, video_id, language="en", force_download_audio=Fal
     transcript = ''
     video_title = ''
     chapters = []
+    
+    video_id = extract_video_id(video_id)
     
     if(not force_download_audio):
         caption = get_captions(video_id, language)
@@ -668,7 +683,7 @@ if __name__ == '__main__':
             with open(args.tf) as f:
                 transcript = f.read()
         else:
-            video_id = args.vid
+            video_id = extract_video_id(args.vid)
             transcript, chapters, video_title = process_youtube_video(YOUTUBE_VIDEO_URL.format(video_id), video_id, language=args.lang, force_download_audio=force_download_audio, transcription_model=args.tmodel)
             with open('output/'+video_id+'-transcript.txt', "w") as f:
                 f.write(transcript)
@@ -698,7 +713,7 @@ if __name__ == '__main__':
     elif args.action == 'embed': # not strong enough, TODO to refactor
         
         if args.vid:
-            transcript_id = args.vid # need this to construct the below. TODO: refactor so the file naming is more structured and simple
+            transcript_id = extract_video_id(args.vid) # need this to construct the below. TODO: refactor so the file naming is more structured and simple
             transcript_filename = 'output/'+transcript_id+'-transcript.txt'
         
         if(args.tf and os.path.exists(args.tf)): # override the value of vid if tf was provided
