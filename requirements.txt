@@ -12,7 +12,7 @@ pandas==2.2.1
 scipy==1.12.0
 yt-dlp==2023.11.16
 ollama==0.1.7
-youtube-transcript-api==0.6.2
+youtube-transcript-api==1.1.0
 markdown
 langchain
 langchain-community
