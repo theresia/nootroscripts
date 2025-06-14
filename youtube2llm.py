@@ -207,7 +207,7 @@ def get_captions(video_id, language="en"):
             raw_caption = t.fetch()
     
     if raw_caption:
-        caption = ' '.join([t.get('text') for t in raw_caption])
+        caption = ' '.join([t.text for t in raw_caption])
 
     return caption
 
