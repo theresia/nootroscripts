@@ -12,7 +12,25 @@ It's very important that you get this right.
 
 user_prompts = {
     # default prompt, for extracting Questions in the text and generate one-sentence answers from
-    'QnAs': "list all the questions asked and a three-sentence answer to each (include all examples of concrete situations and stories shared in the answer)",
+    'QnAs': """
+Identify the points conveyed in the text and convert them into clear, natural questions.
+
+For each question:
+1. Write a well-formed, concise question that captures an important idea from the text.
+2. Provide an answer in three sentences.
+3. Include all relevant concrete situations, examples, and events mentioned in the text.
+
+Guidelines:
+- You MAY infer and construct questions if they are not explicitly stated.
+- Focus on clarity, usefulness, and coverage of the content.
+- Do NOT include rhetorical fragments or incomplete thoughts as questions.
+- Ensure each Q&A pair captures a distinct aspect of the text.
+
+Output format:
+1. Question
+  - Answer (3 sentences)
+    """,
+    'QnAs-old': "list all the questions asked and a three-sentence answer to each (include all examples of concrete situations and stories shared in the answer)",
     'note': "You are an expert at making factual, succinct, and detailed notes from transcripts. " \
             "You will rewrite the transcript provided into notes. Do not summarize and keep every information. " \
             "Don't repeat points you have previously made, and don't include anything that's not in the text.",

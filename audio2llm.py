@@ -263,6 +263,12 @@ def chunk_text(transcript, model_name, chunking_method='word', n_div=1):
                 # 20k is better than 40k. more granular
                 # 15k is the best for the Perell - Shaan master storytelling episode. because word count of transcript is 24077?
                 # but 10k is the best for the Ken Liu episode on thegradient? because word count of transcript is 19844?
+        elif (model_name == 'gpt-4.1'): # 1 million context window https://developers.openai.com/api/docs/models/gpt-4.1
+            n = 20000 # the range is probably 10,000–50,000 tokens. so like chunk_size = 20,000–40,000 tokens and overlap = 1,000–3,000 tokens (for transcripts)
+        elif (model_name == 'gpt-5.2'): # 400k context window https://developers.openai.com/api/docs/models/gpt-5.2
+            n = 10000
+        elif (model_name == 'gpt-5.4'): # 1.050.000 context window https://developers.openai.com/api/docs/models/gpt-5.2
+            n = 20000
         elif (model_name == 'qwen2'):
             n = 2000 # idk, perhaps this size is fine? compared to 4k for gpt-4o
         elif(model_name == 'gpt-4'): # 8192
@@ -520,7 +526,7 @@ if __name__ == '__main__':
     parser.add_argument('--af', type=str, help='the audio file to summarize')
     parser.add_argument('--prompt', type=str, help='the prompt to use in lieu of the default ones')
     parser.add_argument('--be_thorough', action='store_true', help='(currently only) for topix mode, longer prompt, more elaborate analysis')
-    parser.add_argument('--lmodel', type=str, default='gpt-4o', help='the GPT model to use for summarization (default: gpt-4o)')
+    parser.add_argument('--lmodel', type=str, default='gpt-4.1', help='the GPT model to use for summarization (default: gpt-4.1)')
     parser.add_argument('--tmodel', type=str, default='base', help='the Whisper model to use for transcription (default: base)')
     parser.add_argument('--cf', type=str, help='the additional context file to use (JSON)')
     parser.add_argument('--save', action='store_true', help='if working with multiple files, should it save the concatenated text?')
